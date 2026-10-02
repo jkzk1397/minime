@@ -9,7 +9,7 @@
 
 > 발표 한 문장: **"빠진 사람의 미니미는 본인이 확인한 입장과 보고서에 있는 말만 하고, 없으면 입을 다문다."**
 
-기획서: [docs/PROJECT_OVERVIEW_v3.md](docs/PROJECT_OVERVIEW_v3.md) · 설계 노트(학습·입력·페르소나·정합성): [docs/04-설계-노트.md](docs/04-설계-노트.md) · 시연 가이드: [docs/03-시연-가이드.md](docs/03-시연-가이드.md)
+기획서: [docs/PROJECT_OVERVIEW_v3.md](docs/PROJECT_OVERVIEW_v3.md) · 설계 노트(학습·입력·페르소나·정합성): [docs/04-설계-노트.md](docs/04-설계-노트.md) · 시연 가이드: [docs/03-시연-가이드.md](docs/03-시연-가이드.md) · 4명 테스트 대본: [docs/05-테스트-대본.md](docs/05-테스트-대본.md)
 
 ---
 

@@ -48,14 +48,14 @@ def p(xs: list[float], q: float) -> float:
 
 
 async def prepared_room() -> Room:
-    """시연 1장면까지 끝난 상태: 민수가 보고서를 올리고 인터뷰로 준비도를 채움."""
+    """시연 1장면까지 끝난 상태: 혜중이 보고서를 올리고 인터뷰로 준비도를 채움."""
     room = seed.fresh_room("eval")
-    m = room.personas["minsu"]
-    rep = persona.add_report(room, m, seed.MINSU_REPORT[0], "\n\n".join(seed.MINSU_REPORT[1]))
+    m = room.personas["hyejung"]
+    rep = persona.add_report(room, m, seed.HYEJUNG_REPORT[0], "\n\n".join(seed.HYEJUNG_REPORT[1]))
     sts, _ = await persona.extract_stances(room, m, rep)
     m.stances += sts
     for q in interview.plan(room, m):
-        _, st, _ = await interview.answer(room, m, q.id, seed.MINSU_INTERVIEW_ANSWERS[q.issue_id])
+        _, st, _ = await interview.answer(room, m, q.id, seed.HYEJUNG_INTERVIEW_ANSWERS[q.issue_id])
         if st:
             interview.confirm(m, st.id, True)
     for pp in room.personas.values():
@@ -70,7 +70,7 @@ def clone(room: Room) -> Room:
 
 
 def asker_for(uid: str) -> str:
-    return "jihyun" if uid != "jihyun" else "jongwon"
+    return "jungmin" if uid != "jungmin" else "jongwon"
 
 
 async def ask(room: Room, target: str, text: str, called: bool = True) -> tuple[dict, Message, float]:
@@ -169,7 +169,7 @@ async def eval_gate(room: Room, labels: list[dict], mode: str) -> dict:
     for item in labels:
         r = clone(room)
         for uid, pp in r.personas.items():
-            pp.mini_on = uid in ("minsu", "haeun")
+            pp.mini_on = uid in ("hyejung", "dongjun")
             pp.last_spoke = 0
         uid, text = item["msg"]
         issue_id, _ = agenda.detect_issue(r, text)

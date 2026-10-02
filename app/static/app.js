@@ -449,7 +449,9 @@
         cont ? null : whoLine(nameOf(m.user_id), [
           meta.refined ? chipTag('다듬음', '미니미가 다듬어 준 문장') : null,
           meta.decision_id ? chipTag('결정', '결정으로 기록된 발언') : null], m.ts),
-        h('div', { class: 'bubble', text: m.text })),
+        h('div', { class: 'bubble', text: m.text, tabindex: acts ? '0' : null, title: acts ? '눌러서 2차 검증 · 결정으로 기록' : null,
+          on: acts ? { click: e => { const r = e.currentTarget.closest('.row'); const open = !r.classList.contains('acts-open');
+            $$('.row.acts-open').forEach(x => x.classList.remove('acts-open')); r.classList.toggle('acts-open', open); } } : null })),
       acts);
   }
   // 다른 주인의 미니미가 바로 이어 말하면 한 줄기 대화로 잇는다
@@ -1015,6 +1017,7 @@
     document.addEventListener('click', e => {
       if (!e.target.closest('.pop-wrap')) closeMenus();
       if (!$('#popover').hidden && !e.target.closest('.popover') && !e.target.closest('.src')) $('#popover').hidden = true;
+      if (!e.target.closest('.row.acts-open')) $$('.row.acts-open').forEach(x => x.classList.remove('acts-open'));
       const b = e.target.closest('[data-act]');
       if (!b) return;
       closeMenus();

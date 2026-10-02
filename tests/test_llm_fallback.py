@@ -76,9 +76,9 @@ def test_citation_check_drops_hallucination(engines):
     room.messages.append(msg)
 
     async def go():
-        idx = await persona.get_index(room, "haeun")
+        idx = await persona.get_index(room, "dongjun")
         hits = await idx.search(msg.text, k=5)
-        return await persona.compose(room, "haeun", msg, "rebuttal", "i1", hits)
+        return await persona.compose(room, "dongjun", msg, "rebuttal", "i1", hits)
     out = asyncio.run(go())
     assert out["engine"].startswith("ollama")
     assert out["dropped"] == 1                                              # '화성 이주' 문장은 지워진다

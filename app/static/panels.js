@@ -490,7 +490,9 @@ window.MMPanels = function (ctx) {
         '초안은 내가 확인하기 전까지 근거로 쓰지 않아요.'])),
       h('label', { class: 'field' }, h('span', { text: '제목' }), title),
       h('div', { class: 'field' },
-        h('div', { class: 'hrow', style: 'justify-content:space-between' }, h('span', { text: '내용' }), tpl),
+        h('div', { class: 'hrow', style: 'justify-content:space-between' }, h('span', { text: '내용' }),
+          d.example ? h('button', { class: 'text-btn', type: 'button', title: '시연 시나리오의 예시 보고서를 넣어요',
+            on: { click: () => { title.value = d.example.report_title; text.value = d.example.report_text; } } }, icon('doc', 'xs'), '예시 보고서 넣기') : tpl),
         text),
       drop, file,
       right(add),
@@ -549,7 +551,10 @@ window.MMPanels = function (ctx) {
       };
       go.addEventListener('click', submit);
       inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) submit(); });
-      return h('div', { class: 'qa' }, head, question, h('div', { class: 'row-form' }, inp, go));
+      const ex = d.example && (d.example.answers || {})[q.issue_id];
+      return h('div', { class: 'qa' }, head, question, h('div', { class: 'row-form' }, inp, go),
+        ex ? h('button', { class: 'text-btn sm', type: 'button', style: 'align-self:flex-start;text-align:left;color:var(--accent)',
+          on: { click: () => { inp.value = ex; inp.focus(); } } }, `예시 답 넣기: "${ex}"`) : null);
     }
     const st = (d.stances || []).find(s => s.id === q.stance_id);
     if (q.status === 'answered' && st) {

@@ -246,7 +246,7 @@ STANCE_CUES = re.compile(r"(생각|해야|좋다|좋겠|낫다|제안|필요|맡
 
 
 def mentions(text: str, names: dict[str, str]) -> list[str]:
-    """'@민수', '민수 미니미', '민수야', '민수 님' 같은 호출을 찾는다. names: uid -> 이름"""
+    """'@혜중', '혜중 미니미', '혜중아', '혜중 님' 같은 호출을 찾는다. names: uid -> 이름"""
     out = []
     for uid, name in names.items():
         if not name:
@@ -258,12 +258,12 @@ def mentions(text: str, names: dict[str, str]) -> list[str]:
 
 
 def addressed_mini(text: str, names: dict[str, str]) -> list[str]:
-    """명시적으로 미니미를 부른 경우 ('@민수', '민수 미니미')."""
+    """명시적으로 미니미를 부른 경우 ('@혜중', '혜중 미니미')."""
     return [uid for uid, n in names.items() if n and re.search(rf"(@{re.escape(n)}|{re.escape(n)}\s?미니미)", text)]
 
 
 def strip_address(text: str, names: list[str]) -> str:
-    """검색 질의에서 호칭('민수 미니미', '@하은', '하은아')을 뺀다. 이름은 근거 문단에 없어서 점수를 깎기 때문."""
+    """검색 질의에서 호칭('혜중 미니미', '@동준', '동준아')을 뺀다. 이름은 근거 문단에 없어서 점수를 깎기 때문."""
     t = text
     for n in sorted((x for x in names if x), key=len, reverse=True):
         t = re.sub(rf"@?{re.escape(n)}\s?(미니미|님|씨|아|야|이가|이는|이도|이)?(?=[\s,?!.]|$)", " ", t)

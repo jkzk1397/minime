@@ -21,36 +21,36 @@ SCENES = [
         "steps": [{"do": "reset"}, {"do": "wait", "s": 0.6}],
     },
     {
-        "id": 1, "title": "준비: 민수의 미니미 만들기", "metric": "페르소나 충실도",
-        "narration": "민수가 회의 전에 보고서를 올리면 AI가 입장 카드 초안을 만들고, 빈 쟁점만 질문합니다. "
+        "id": 1, "title": "준비: 혜중의 미니미 만들기", "metric": "페르소나 충실도",
+        "narration": "혜중이 회의 전에 보고서를 올리면 AI가 입장 카드 초안을 만들고, 빈 쟁점만 질문합니다. "
                      "한 줄로 대충 답해도 미니미가 풀어 쓰고, 본인이 '맞아요'를 누른 것만 근거가 됩니다. 준비도가 1/3 → 3/3으로 차오릅니다.",
-        "focus": "prep", "view": "prep:minsu",
-        "steps": [{"do": "report", "uid": "minsu"}, {"do": "wait", "s": 1.2}, {"do": "interview", "uid": "minsu"}],
+        "focus": "prep", "view": "prep:hyejung",
+        "steps": [{"do": "report", "uid": "hyejung"}, {"do": "wait", "s": 1.2}, {"do": "interview", "uid": "hyejung"}],
     },
     {
         "id": 2, "title": "대리 참석: 2명이 빠져도 회의는 열린다", "metric": "개입 F1 · 근거 일치율",
-        "narration": "민수와 하은이 미니미를 켜고 빠집니다. 상호작용형이라, 종원이 A안을 꺼내자 민수의 미니미가 반론하고 "
-                     "하은의 미니미가 바로 이어서 조건을 붙입니다. 모든 문장에 출처 칩이 붙고, 미니미 말풍선을 누르면 "
+        "narration": "혜중과 동준이 미니미를 켜고 빠집니다. 상호작용형이라, 종원이 A안을 꺼내자 혜중의 미니미가 반론하고 "
+                     "동준의 미니미가 바로 이어서 조건을 붙입니다. 근거가 있는 문장엔 밑줄이 있어 누르면 원문이 보이고, 말풍선을 누르면 "
                      "왜 지금 말했는지 점수로 보입니다.",
         "focus": "gate",
         "steps": [
-            {"do": "away", "uid": "minsu", "on": True}, {"do": "wait", "s": 0.5},
-            {"do": "away", "uid": "haeun", "on": True}, {"do": "wait", "s": 0.6},
+            {"do": "away", "uid": "hyejung", "on": True}, {"do": "wait", "s": 0.5},
+            {"do": "away", "uid": "dongjun", "on": True}, {"do": "wait", "s": 0.6},
             {"do": "mode", "mode": "interactive", "by": "jongwon"}, {"do": "wait", "s": 0.6},
             {"do": "say", "uid": "jongwon", "text": "오늘은 예산안부터 정하자. 나는 공연이 축제의 얼굴이라 A안이 현실적이라고 봐."},
             {"do": "wait", "s": 2.2},
-            {"do": "say", "uid": "jihyun", "text": "오 둘 다 데이터가 있으니까 설득력 있네."},
+            {"do": "say", "uid": "jungmin", "text": "오 둘 다 데이터가 있으니까 설득력 있네."},
         ],
     },
     {
         "id": 3, "title": "침묵: 근거가 없으면 말하지 않는다", "metric": "올바른 침묵률",
-        "narration": "민수 보고서에 없는 걸 물으면, 미니미는 지어내지 않고 '민수 님께 확인이 필요해요'라고 답한 뒤 "
+        "narration": "혜중 보고서에 없는 걸 물으면, 미니미는 지어내지 않고 '혜중 님께 확인이 필요해요'라고 답한 뒤 "
                      "복귀 후 확인할 질문으로 남깁니다. 날짜를 정해 달라는 약속 요청도 위임 범위 밖이라 보류합니다.",
         "focus": "evidence",
         "steps": [
-            {"do": "say", "uid": "jihyun", "text": "민수 미니미, 무대 음향 장비 대여 업체는 알아봤어?"},
+            {"do": "say", "uid": "jungmin", "text": "혜중 미니미, 무대 음향 장비 대여 업체는 알아봤어?"},
             {"do": "wait", "s": 1.2},
-            {"do": "say", "uid": "jongwon", "text": "하은아 리허설 날짜는 네가 정해 줄 수 있지? 목요일 어때?"},
+            {"do": "say", "uid": "jongwon", "text": "동준아 리허설 날짜는 네가 정해 줄 수 있지? 목요일 어때?"},
         ],
     },
     {
@@ -61,31 +61,31 @@ SCENES = [
         "steps": [
             {"do": "say", "uid": "jongwon", "text": "근데 어제 축구 봤어? 손흥민 골 미쳤던데"},
             {"do": "wait", "s": 0.8},
-            {"do": "say", "uid": "jihyun", "text": "ㅋㅋ 봤지. 오늘 점심 학식 뭐 나와?"},
+            {"do": "say", "uid": "jungmin", "text": "ㅋㅋ 봤지. 오늘 점심 학식 뭐 나와?"},
         ],
     },
     {
         "id": 5, "title": "2차 검증과 보류 결정", "metric": "검증 탐지율",
-        "narration": "지현이 결론을 내리자 불참자에게 영향을 주는 결정이라 자동으로 '보류'됩니다. "
-                     "지현이 자기 미니미에게 검증을 맡기면 '근거 약함 · 지난 회의 발언과 충돌 · 놓친 점 · 반대 관점' 카드가 나옵니다. 고칠지는 사람이 정합니다.",
+        "narration": "정민이 결론을 내리자 불참자에게 영향을 주는 결정이라 자동으로 '보류'됩니다. "
+                     "정민이 자기 미니미에게 검증을 맡기면 '근거 약함 · 지난 회의 발언과 충돌 · 놓친 점 · 반대 관점' 카드가 나옵니다. 고칠지는 사람이 정합니다.",
         "focus": "verify",
         "steps": [
-            {"do": "say", "uid": "jihyun", "text": "결론적으로 B안으로 가자. 학생 참여 프로그램이 만족도가 항상 더 높으니까 확실해."},
+            {"do": "say", "uid": "jungmin", "text": "결론적으로 B안으로 가자. 학생 참여 프로그램이 만족도가 항상 더 높으니까 확실해."},
             {"do": "wait", "s": 1.0},
-            {"do": "verify", "uid": "jihyun", "match": "결론적으로 B안"},
+            {"do": "verify", "uid": "jungmin", "match": "결론적으로 B안"},
             {"do": "wait", "s": 1.6},
             {"do": "say", "uid": "jongwon",
-             "text": "좋아. 발표 역할은 내가 사회랑 도입, 지현이가 본론, 민수가 질의응답 근거 정리하는 걸로 하자."},
+             "text": "좋아. 발표 역할은 내가 사회랑 도입, 정민이가 본론, 혜중이가 질의응답 근거 정리하는 걸로 하자."},
         ],
     },
     {
         "id": 6, "title": "모델이 꺼져도 회의는 계속", "metric": "기술성 · 완성도",
-        "narration": "시연 중에 모델을 끕니다. 엔진 표시가 '규칙 대체'로 바뀌어도 하은의 미니미는 보고서 문장을 그대로 인용해 답합니다. "
+        "narration": "시연 중에 모델을 끕니다. 엔진 표시가 '규칙 대체'로 바뀌어도 동준의 미니미는 보고서 문장을 그대로 인용해 답합니다. "
                      "모델이 늦거나 죽어도 회의는 멈추지 않습니다.",
         "focus": "engine",
         "steps": [
             {"do": "engine", "force_rule": True}, {"do": "wait", "s": 0.8},
-            {"do": "say", "uid": "jongwon", "text": "하은 미니미, 타 대학 사례는 어떤 게 있어?"},
+            {"do": "say", "uid": "jongwon", "text": "동준 미니미, 타 대학 사례는 어떤 게 있어?"},
             {"do": "wait", "s": 1.2}, {"do": "engine", "force_rule": False},
         ],
     },
@@ -97,16 +97,16 @@ SCENES = [
     },
     {
         "id": 8, "title": "복귀: 내가 빠진 사이", "metric": "현장 적용성",
-        "narration": "돌아온 민수는 '내가 빠진 사이'에서 미니미가 한 말과 보류 결정을 확인합니다. "
+        "narration": "돌아온 혜중은 '내가 빠진 사이'에서 미니미가 한 말과 보류 결정을 확인합니다. "
                      "예산안은 승인하고, 역할 분담에는 이의를 달고, 미니미가 남긴 질문에 답하면 다음 회의부터는 미니미가 답할 수 있습니다.",
-        "focus": "digest", "view": "digest:minsu",
+        "focus": "digest", "view": "digest:hyejung",
         "steps": [
-            {"do": "away", "uid": "minsu", "on": False}, {"do": "wait", "s": 2.0},
-            {"do": "decide", "uid": "minsu", "match": "B안", "action": "approve"}, {"do": "wait", "s": 1.4},
-            {"do": "decide", "uid": "minsu", "match": "역할", "action": "object",
+            {"do": "away", "uid": "hyejung", "on": False}, {"do": "wait", "s": 2.0},
+            {"do": "decide", "uid": "hyejung", "match": "B안", "action": "approve"}, {"do": "wait", "s": 1.4},
+            {"do": "decide", "uid": "hyejung", "match": "역할", "action": "object",
              "note": "질의응답 근거 정리는 좋아요. 그런데 설문 결과 슬라이드는 제가 직접 발표하고 싶어요."},
             {"do": "wait", "s": 1.4},
-            {"do": "answer_q", "uid": "minsu", "match": "음향",
+            {"do": "answer_q", "uid": "hyejung", "match": "음향",
              "text": "음향 장비 업체는 아직 안 알아봤어. 이번 주 금요일까지 3곳 견적 받아 볼게"},
         ],
     },
@@ -197,7 +197,7 @@ async def _do(room_id: str, step: dict) -> None:
         await _emit(room_id, step="방을 시연 시작 상태로 되돌렸어요")
     elif kind == "report":
         p = room.personas[step["uid"]]
-        title, paras = seed.MINSU_REPORT
+        title, paras = seed.HYEJUNG_REPORT
         await _emit(room_id, step=f"{p.name}: 보고서 업로드 → 입장 카드 초안 만들기")
         p.reports = []
         p.stances = [s for s in p.stances if s.origin != "report"]
@@ -213,7 +213,7 @@ async def _do(room_id: str, step: dict) -> None:
         qs = interview.plan(room, p)
         await hub.broadcast(room_id, {"type": "prep_update", "user_id": p.user_id, "event": "plan"})
         for q in qs:
-            ans = seed.MINSU_INTERVIEW_ANSWERS.get(q.issue_id, "")
+            ans = seed.HYEJUNG_INTERVIEW_ANSWERS.get(q.issue_id, "")
             if not ans:
                 continue
             await _emit(room_id, step=f"인터뷰: {q.question[:40]}…  → \"{ans}\"")

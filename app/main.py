@@ -69,7 +69,8 @@ async def lifespan(app: FastAPI):
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, retrieval.warmup)       # 형태소 분석기 첫 호출 지연을 미리
     probe = asyncio.create_task(_probe_loop())
-    hub.room("demo")
+    if {"minsu", "jihyun", "haeun"} & set(hub.room("demo").personas):     # 예전 이름으로 저장된 시연 방
+        hub.replace(seed.fresh_room("demo"))
     base = config.PUBLIC_URL or f"http://{_lan_ip()}:{os.getenv('PORT', '8000')}"
     log.warning("팀원 접속 주소: %s/?room=demo  (같은 와이파이에서 휴대폰·노트북으로 접속)", base)
     yield
@@ -271,6 +272,7 @@ async def member_detail(room_id: str, uid: str):
         r["labels"] = [persona.report_label(p, ri, i) for i in range(len(r["paragraphs"]))]
     d["readiness"] = await persona.readiness(room, uid)
     d["last_digest"] = orchestrator.fresh_digest(room, uid)   # 이미 답한 질문·결정은 지금 상태로
+    d["example"] = seed.example_for(room, uid)
     return d
 
 

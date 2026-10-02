@@ -19,15 +19,16 @@ STATUS_KO = {"confirmed": "확정", "pending": "보류", "needs_check": "확인 
 
 
 # ---------------------------------------------------------------- 결정
-async def affected_members(room: Room, issue_id: str, exclude: str = "") -> list[str]:
-    """불참자 중 이 쟁점에 입장·근거가 있는 사람. 쟁점을 모르면 불참자 전원."""
+async def affected_members(room: Room, issue_id: str, exclude: str = "", text: str = "") -> list[str]:
+    """불참자 중 이 쟁점에 입장·근거가 있거나 결정 문장에서 이름이 불린 사람. 쟁점을 모르면 불참자 전원."""
     out = []
     issue = room.issue(issue_id)
+    named = set(ko.mentions(text, {u: p.name for u, p in room.personas.items()})) if text else set()
     for uid in room.absent():
         if uid == exclude:
             continue
         p = room.personas[uid]
-        if not issue or p.confirmed(issue_id):
+        if not issue or uid in named or p.confirmed(issue_id):
             out.append(uid)
             continue
         idx = await get_index(room, uid)
@@ -46,7 +47,7 @@ def decision_text(text: str, issue=None) -> str:
 
 
 async def record(room: Room, msg: Message, issue_id: str, manual: bool = False) -> Decision:
-    affected = await affected_members(room, issue_id, exclude=msg.user_id)
+    affected = await affected_members(room, issue_id, exclude=msg.user_id, text=msg.text)
     status = "pending" if affected else ("confirmed" if issue_id else "needs_check")
     d = Decision(new_id("d"), decision_text(msg.text, room.issue(issue_id)), issue_id, msg.user_id, status, affected, {}, msg.id)
     room.decisions.append(d)

@@ -117,9 +117,14 @@ async def run(room: Room, requester: str, target: Message) -> dict:
             if mine and mine.position and mine.position != pos:
                 conflicts.append({"label": stance_labels(sp).get(mine.id, "입장 카드"), "text": mine.claim,
                                   "source": "own", "position": mine.position, "strength": 1.0})
+        num = _numeric_mismatch(c["claim"] + " " + c.get("grounds", ""), own_hits + team_hits)
+        if num:
+            conflicts.append(num)
         c["evidence"] = ev[:5]
         c["conflicts"] = conflicts[:2]
         c["verdict"], c["note"] = _rule_verdict(c, pos)
+        if c["verdict"] == "none" and config.TAVILY_API_KEY:
+            c["evidence"] += await _web(c["claim"])      # 선택: 팀 자료에 없으면 웹에서 한 번 더 (Tavily 무료 한도)
 
     missed = _missed(room, speaker, target, issue_id)
     devil = await _devil(room, team, target, issue_id, claims)
@@ -169,6 +174,18 @@ async def run(room: Room, requester: str, target: Message) -> dict:
     }
 
 
+async def _web(claim: str) -> list[dict]:
+    from . import tools
+    try:
+        r = await tools.web_search(claim)
+    except Exception:
+        return []
+    if not r.get("answer"):
+        return []
+    return [{"label": "웹 검색", "text": r["answer"][:400], "source": "web", "strength": 0.0, "position": "",
+             "urls": r.get("sources", [])[:3]}]
+
+
 def _ev(h: Hit, source: str, issue) -> dict:
     return {"label": h.chunk.label, "text": h.chunk.text, "source": source, "strength": round(h.strength, 2),
             "position": detect_position(issue, h.chunk.text) if issue else ""}
@@ -185,9 +202,32 @@ def _past_statements(room: Room, uid: str, target: Message) -> list[dict]:
     return out
 
 
+def _numeric_mismatch(claim: str, hits: list[Hit]) -> dict | None:
+    """수치 대조: 주장의 '무엇의 몇 단위'가 자료에 다른 값으로 적혀 있으면 충돌로 본다 (예: 응답자 2천 명 ↔ 812명)."""
+    nums = ko.numbers(claim)
+    if not nums:
+        return None
+    for h in hits:
+        if h.strength < 0.1:
+            continue
+        ev_nums = ko.numbers(h.chunk.text)
+        for v, unit, subj in nums:
+            if not subj:
+                continue
+            # 같은 단위 + 같은 대상('응답자 2천 명' ↔ '응답 812명')의 숫자끼리만 비교한다
+            same_unit = [x for x in ev_nums if x[1] == unit and x[2][:2] == subj[:2]]
+            if same_unit and not any(abs(x[0] - v) <= max(0.01 * v, 1e-6) for x in same_unit):
+                shown = ", ".join(f"{x[0]:g}{x[1]}" for x in same_unit[:3])
+                return {"label": h.chunk.label, "text": h.chunk.text, "source": "number", "position": "",
+                        "strength": 1.0, "numeric": f"주장 {v:g}{unit} ↔ 자료 {shown}"}
+    return None
+
+
 def _rule_verdict(c: dict, pos: str) -> tuple[str, str]:
     if c["conflicts"]:
         x = c["conflicts"][0]
+        if x.get("numeric"):
+            return "conflict", f"숫자가 자료와 달라요 ({x['numeric']} · {x['label']})."
         return "conflict", f"{x['label']}에서는 '{x['position']}' 쪽이었어요: \"{_short(x['text'])}\""
     support = [e for e in c["evidence"]
                if (not pos or not e["position"] or e["position"] == pos) and e["strength"] >= config.EVIDENCE_MIN]

@@ -612,7 +612,7 @@
         h('div', { class: 'ev-list' }, ev.map(e => h('div', { class: `ev${e.conflict ? ' conflict' : ''}` },
           h('span', { class: 'lab', text: e.label }),
           h('span', { class: 'grow', text: e.text }),
-          e.source ? chip({ own: '내 자료', team: '팀원 자료', past: '이전 발언' }[e.source] || e.source, e.conflict ? 'bad' : '') : null)))) : null);
+          e.source ? chip({ own: '내 자료', team: '팀원 자료', past: '이전 발언', web: '웹', number: '수치 불일치' }[e.source] || e.source, e.conflict ? 'bad' : '') : null)))) : null);
   }
 
   // ---- 회의록 카드

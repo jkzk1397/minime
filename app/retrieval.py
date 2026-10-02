@@ -202,10 +202,12 @@ class Index:
                     s[i] += self.idf.get(w, 0) * f * (self.K1 + 1) / (f + denom_base)
         return s
 
-    async def search(self, query: str, k: int = 5, method: str = "hybrid",
+    async def search(self, query: str, k: int = 5, method: str | None = None,
                      kinds: Iterable[str] | None = None, issue_id: str | None = None) -> list[Hit]:
         if not self.chunks or not query.strip():
             return []
+        from . import config
+        method = method or config.RETRIEVAL_METHOD
         q = tokens(query)
         allowed = [i for i, c in enumerate(self.chunks)
                    if (kinds is None or c.kind in kinds) and (issue_id is None or c.issue_id in ("", issue_id))]

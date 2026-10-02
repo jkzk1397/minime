@@ -229,12 +229,16 @@ def _has_model(installed: set[str], model: str) -> bool:
 
 
 _client: httpx.AsyncClient | None = None
+_client_loop = None
 
 
 def _http() -> httpx.AsyncClient:
-    global _client
-    if _client is None:
+    """이벤트 루프마다 클라이언트 하나 (평가 스크립트처럼 asyncio.run을 여러 번 써도 연결 풀이 꼬이지 않게)."""
+    global _client, _client_loop
+    loop = asyncio.get_running_loop()
+    if _client is None or _client_loop is not loop:
         _client = httpx.AsyncClient(timeout=30)
+        _client_loop = loop
     return _client
 
 

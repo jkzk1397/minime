@@ -69,8 +69,9 @@ COOLDOWN_SEC = _f("COOLDOWN_SEC", 12)  # 같은 미니미가 다시 말하기까
 TYPING_WAIT_SEC = _f("TYPING_WAIT_SEC", 2.5)  # 사람이 입력 중이면 이만큼까지 기다린다
 
 # ---------------------------------------------------------------- 근거 (M1)
-EVIDENCE_MIN = _f("EVIDENCE_MIN", 0.30)       # 이 점수 아래면 말하지 않는다 (eval로 보정)
+EVIDENCE_MIN = _f("EVIDENCE_MIN", 0.35)       # 이 점수 아래면 말하지 않는다 (eval/eval.py --sweep 으로 정함)
 SUPPORT_MIN = _f("SUPPORT_MIN", 0.18)         # 생성 문장과 인용 문단의 최소 일치도 (출처 검사)
+RETRIEVAL_METHOD = os.getenv("RETRIEVAL_METHOD", "hybrid").lower()   # hybrid | bm25 | vector (eval로 비교해 고른다)
 
 # ---------------------------------------------------------------- 안건 이탈 (M4)
 DRIFT_THRESHOLD = _f("DRIFT_THRESHOLD", 0.80)  # 안건 거리(0~1). 이 위가 K턴 이어지면 상기

@@ -139,17 +139,18 @@ DECISION = re.compile(r"(으?로\s?하자|으?로\s?가자|하는\s?걸로|가�
 DECISION_STRONG = re.compile(r"(으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정하|확정|결론|이대로\s?가|하기로|맡는\s?걸로|"
                              r"맡기로|으?로\s?정하자|으?로\s?정해)")
 FACT_Q = re.compile(r"(알아봤|몇\s?(명|개|번|시|일|원|%|곳|팀)?|언제|얼마|어디|누가|누구|업체|날짜|정확히|구체적으로)")
-OPINION_Q = re.compile(r"(생각|의견|어때|어떻게\s?(봐|보|생각)|입장|찬성|반대|동의|괜찮|어느\s?쪽)")
+OPINION_Q = re.compile(r"(생각|의견|어때|어떻게\s?(봐|보|생각)|입장|찬성|반대|동의|괜찮|어느\s?쪽|싶은|싶어|원하|원해|맡고|맡을|선호)")
+_STRONG_FACT = re.compile(r"(알아봤|몇\s?(명|개|번|시|일|원|%|곳|팀)|언제|얼마|어디|업체|날짜)")
 
 
 def question_kind(text: str) -> str:
     """'fact'(사실을 묻는 질문: 근거 문단이 그 내용을 덮어야 답한다) / 'opinion'(입장을 묻는 질문) / ''(질문 아님)."""
     if not QUESTION.search(text):
         return ""
-    if FACT_Q.search(text):
+    if _STRONG_FACT.search(text):
         return "fact"
     if OPINION_Q.search(text):
-        return "opinion"
+        return "opinion"            # 본인의 선호·입장을 묻는 질문 ('맡고 싶은 역할이 뭐야?')
     return "fact"
 
 
@@ -162,7 +163,7 @@ def decision_sentence(text: str, has_position) -> str:
         if DECISION_STRONG.search(s) or (DECISION.search(s) and has_position(s)):
             return s
     return ""
-ABSOLUTE = re.compile(r"(항상|절대|무조건|반드시|100%|확실|모든|누구나|전혀|당연히|무조건)")
+ABSOLUTE = re.compile(r"(항상|절대|무조건|반드시|100%|확실|모든|모두|전부|누구나|누구도|아무도|하나도|전혀|당연히|언제나|매번|틀림없)")
 GROUNDS = re.compile(r"(때문|왜냐하면|니까|므로|근거|자료|조사|설문|통계|결과|에 따르면|\d)")
 POS_CUES = ["찬성", "좋", "낫", "가자", "하자", "선택", "지지", "필요", "해야", "제안", "유지", "늘리", "늘려", "확대",
             "동의", "추천", "원해", "원하", "현실적", "괜찮", "가는 게", "으로 가", "로 가", "맞는", "효과적"]
@@ -195,3 +196,25 @@ def strip_address(text: str, names: list[str]) -> str:
         t = re.sub(rf"@?{re.escape(n)}\s?(미니미|님|씨|아|야|이가|이는|이도|이)?(?=[\s,?!.]|$)", " ", t)
     t = re.sub(r"미니미", " ", t)
     return re.sub(r"\s+", " ", t).strip() or text
+
+
+_NUM = re.compile(r"(\d+(?:[.,]\d+)?)\s*(천|만|억)?\s*(명|%|퍼센트|점|원|곳|팀|장|번|분|개|배|시간|일|주)")
+_MULT = {"천": 1e3, "만": 1e4, "억": 1e8}
+
+
+def numbers(text: str) -> list[tuple[float, str, str]]:
+    """'응답자가 2천 명' → [(2000.0, '명', '응답자')]. 단위와 바로 앞 명사(무엇의 숫자인지)를 함께 돌려준다."""
+    out = []
+    for m in _NUM.finditer(text):
+        try:
+            v = float(m.group(1).replace(",", "")) * _MULT.get(m.group(2) or "", 1)
+        except ValueError:
+            continue
+        unit = "%" if m.group(3) == "퍼센트" else m.group(3)
+        before = re.findall(r"[가-힣A-Za-z]+", text[max(0, m.start() - 14): m.start()])
+        subject = _JOSA_TAIL.sub("", before[-1]) if before else ""
+        out.append((v, unit, subject))
+    return out
+
+
+_JOSA_TAIL = re.compile(r"(은|는|이|가|을|를|의|에서|에|도|만|로|으로)$")

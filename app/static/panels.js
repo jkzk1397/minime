@@ -80,7 +80,7 @@ window.MMPanels = function (ctx) {
     const quote = h('div', {},
       h('div', { class: 'brain-quote', style: 'display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden' },
         trig ? [h('b', { text: `${nameOf(trig.user_id)}:` }), ` ${trig.text}`] : h('span', { class: 'muted', text: '이전 발언에 대한 판단' }),
-        g.msg_position ? h('span', { class: 'muted', text: ` · ${g.msg_position} 쪽` }) : null),
+        g.msg_position ? h('span', { class: 'muted', text: ` (${g.msg_position} 쪽)` }) : null),
       h('div', { class: 'brain-meta' },
         !g.source || g.source === 'rule' ? tag('규칙으로 판단', '') : tag(`모델 판단 · ${engineLabel(g.source)}`, 'info'),
         tag(zoneLabel, zoneKind),
@@ -189,7 +189,8 @@ window.MMPanels = function (ctx) {
       add('text', { x: 2, y: Y(v) + 3 }, v.toFixed(1));
     }
     add('line', { x1: P.l, x2: W - P.r, y1: Y(thr), y2: Y(thr), style: 'stroke:var(--bad)', 'stroke-dasharray': '4 3' });
-    add('text', { x: W - P.r - 2, y: Y(thr) - 4, 'text-anchor': 'end' }, `이탈 기준 ${thr}`);
+    // 첫 발언들은 대개 안건 안쪽이라, 기준선 이름은 왼쪽에 둬야 점과 덜 겹친다
+    add('text', { x: P.l + 4, y: Y(thr) - 4 }, `이탈 기준 ${thr}`);
     if (pts.length) {
       add('polyline', {
         points: pts.map((p, i) => `${X(i)},${Y(p.distance)}`).join(' '),
@@ -498,8 +499,10 @@ window.MMPanels = function (ctx) {
         h('div', { class: 'report-head' }, icon('doc', 'xs'), h('span', { class: 't', text: rep.title }),
           h('span', { class: 'muted sm', style: 'font-weight:400', text: `${(rep.paragraphs || []).length}문단` }),
           h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': '보고서 삭제', title: '삭제', on: { click: removeReport(rep) } }, icon('trash'))),
-        h('ol', {}, (rep.paragraphs || []).map((t, i) => h('li', {},
-          h('span', { class: 'lab', text: (rep.labels || [])[i] || `${i + 1}문단` }), h('span', { text: t })))))),
+        // 라벨('보고서2 3문단')이 기본 56px 칸보다 길어서, 목록 전체를 한 격자로 맞춰 라벨 폭을 통일한다
+        h('ol', { style: 'display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 10px' },
+          (rep.paragraphs || []).map((t, i) => h('li', { style: 'display:contents' },
+            h('span', { class: 'lab', style: 'padding-top:1px', text: (rep.labels || [])[i] || `${i + 1}문단` }), h('span', { text: t })))))),
     ];
   }
 

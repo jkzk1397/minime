@@ -185,7 +185,7 @@
     $('#app').hidden = false;
     fill($('#feed'));
     renderComposerState();
-    if (observer) openDemoPanel();
+    if (observer && roomId === 'demo') openDemoPanel();   // 실전 방의 발표 화면엔 시연 가이드를 띄우지 않는다
     connect();
   }
   function wsUrl() {
@@ -974,7 +974,7 @@
         return { title: t.trim(), options: opts ? opts.split(/[,，/]/).map(s => s.trim()).filter(Boolean) : [] };
       });
       try {
-        await api('POST', '/api/rooms', { room_id: f.room_id.value.trim(), title: f.title.value, agenda: f.agenda.value, issues, seed: f.seed.checked });
+        await api('POST', '/api/rooms', { room_id: f.room_id.value.trim(), title: f.title.value, agenda: f.agenda.value, issues, seed: f.seed_live.checked ? 'live' : f.seed.checked });
         const id = f.room_id.value.trim();
         $('#roomInput').value = id; loadLobbyRoom(id); f.reset(); f.closest('details').open = false;
         toast('방을 만들었어요. 자리를 고르거나 새 팀원으로 들어오세요.');

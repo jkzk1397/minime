@@ -87,6 +87,7 @@ async def answer(room: Room, p: Persona, qid: str, text: str) -> tuple[Interview
     else:
         engine = llm.RULE
         expanded, red_line = _rule_expand(text, cand), ""
+    red_line = red_line or ko.red_line(text)        # '근데 ~는 꼭 남기자' 같은 조건은 양보 불가 조건으로
 
     position = detect_position(issue, text) or detect_position(issue, expanded)
     if cand:

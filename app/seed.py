@@ -143,9 +143,12 @@ EXAMPLES = {"hyejung": {"report_title": HYEJUNG_REPORT[0], "report_text": "\n\n"
 
 def example_for(room: Room, uid: str) -> dict | None:
     """시연 시나리오(같은 쟁점)로 만든 방에서만 예시 보고서·인터뷰 답을 준다. 실제 방에는 보이지 않는다."""
-    ex = EXAMPLES.get(uid)
     titles = {i.title for i in room.issues}
-    return ex if ex and all(i.title in titles for i in ISSUES) else None
+    for examples, issues in ((EXAMPLES, ISSUES), (LIVE_EXAMPLES, LIVE_ISSUES)):
+        ex = examples.get(uid)
+        if ex and all(i.title in titles for i in issues):
+            return ex
+    return None
 
 
 def seed_room(room: Room) -> Room:
@@ -173,3 +176,59 @@ def fresh_room(room_id: str) -> Room:
     seed_room(r)
     r.meeting["seeded_at"] = time.time()
     return r
+
+
+# ================================================================ 실전 시연 (발표자 동준의 화면에서 진행)
+# 방을 만들 때 '실전 시연용'을 고르면: 종원·혜중·정민은 보고서와 확인된 입장이 미리 들어가 있고,
+# 동준(발표자)만 프로필뿐이라 공유 화면에서 [예시 보고서 넣기] → 인터뷰 → 대리 참석을 직접 보여 준다.
+# docs/06-실전-시연-대본.md · tests/test_live_demo.py 와 같은 내용.
+LIVE_ISSUES = [
+    Issue("i1", "제안할 축제 예산안", [dict(o) for o in ISSUES[0].options]),
+    Issue("i2", "발표 역할 나누기", [], keywords=["역할", "발표자", "사회", "질의응답", "본론", "맡"]),
+]
+
+DONGJUN_REPORT = ("예상 반론과 운영 계획", [
+    "작년 축제 체험 부스 중 3곳은 운영 인원이 부족해 둘째 날 문을 닫았다.",
+    "한 대학은 2024년 축제에서 연예인 공연을 1팀으로 줄이고 참여형 프로그램을 늘렸는데 방문객이 오히려 15% 늘었다.",
+    "상대 조나 교수님은 학생 참여 프로그램은 준비 부담이 크고 참여율이 낮을 수 있다고 반론할 것이다.",
+    "그래서 나는 학생 참여 프로그램을 늘리는 B안이 맞다고 생각한다. "
+    "다만 운영 인력 확보 계획(동아리 연합, 봉사 시간 인정)을 반드시 같이 내야 한다.",
+])
+LIVE_EXAMPLES = {"dj": {"report_title": DONGJUN_REPORT[0], "report_text": "\n\n".join(DONGJUN_REPORT[1]),
+                        "answers": {"i1": "맞아 B안. 근데 운영 인력 계획은 꼭 같이 내야 해",
+                                    "i2": "나는 반론 대비랑 질의응답 맡을게"}}}
+
+
+def live_personas() -> list[Persona]:
+    base = {p.user_id: p for p in personas()}
+    jw, hj, jm, dj = base["jongwon"], base["hyejung"], base["jungmin"], base["dongjun"]
+    jw.user_id, hj.user_id, jm.user_id, dj.user_id = "jw", "hj", "jm", "dj"
+    jw.stances = [
+        _stance("i1", "연예인 공연 예산을 유지하는 A안이 현실적이에요.", "A안",
+                "작년 축제 SNS 게시물의 70%가 공연 영상이었고 외부 방문객도 공연 날 가장 많았어요.",
+                "축제는 학교 홍보 수단이기도 하다", priority=1, sources=["보고서 2문단", "보고서 3문단"]),
+        _stance("i2", "저는 사회와 도입·결론을 맡을게요.", "", "발표 10분, 질의응답 5분 구성이에요.", sources=["보고서 4문단"]),
+    ]
+    hj.reports = [Report("r1", HYEJUNG_REPORT[0], list(HYEJUNG_REPORT[1]))]
+    hj.stances = [
+        _stance("i1", "학생 참여 프로그램 예산을 늘리는 B안을 제안해야 해요.", "B안",
+                "만족도 조사에서 동아리·체험 부스가 4.2점으로 연예인 공연 3.6점보다 높았어요.",
+                priority=1, sources=["보고서 2문단", "보고서 5문단"]),
+        _stance("i2", "저는 자료조사와 질의응답 근거 정리를 맡을게요.", "", "", origin="interview"),
+    ]
+    jm.stances = [_stance("i2", "저는 본론 발표와 슬라이드 제작을 맡을게요.", "", "", sources=["보고서 1문단"])]
+    jm.past = [{"text": "솔직히 연예인 공연 없으면 축제에 사람이 안 올 것 같아. A안도 나쁘지 않은 듯.",
+                "issue_id": "i1", "when": "지난 회의 (9/25)"}]
+    dj.reports, dj.stances, dj.past = [], [], []           # 발표자: 공유 화면에서 직접 준비한다
+    return [jw, hj, jm, dj]
+
+
+def seed_live_room(room: Room) -> Room:
+    seed_room(room)
+    room.title = "스피치와 토론 4조"
+    room.agenda = "축제 예산 제안 발표 준비 (A안 공연 유지 · B안 학생 참여 확대)"
+    room.issues = [Issue(i.id, i.title, [dict(o) for o in i.options], keywords=list(i.keywords)) for i in LIVE_ISSUES]
+    room.personas = {p.user_id: p for p in live_personas()}
+    for p in room.personas.values():
+        p.touch()
+    return room

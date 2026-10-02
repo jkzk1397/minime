@@ -148,7 +148,7 @@ class RoomIn(BaseModel):
     title: str = ""
     agenda: str = ""
     issues: list[IssueIn] = Field(default_factory=list)
-    seed: bool = False
+    seed: bool | str = False          # True: 시연 시나리오 · "live": 실전 시연(동준만 비우고 나머지 자료 채움)
 
 
 @app.get("/api/rooms")
@@ -163,7 +163,9 @@ async def create_room(body: RoomIn):
     if hub.exists(body.room_id):
         raise HTTPException(409, "이미 있는 방 코드예요.")
     room = hub.room(body.room_id)
-    if body.seed:
+    if body.seed == "live":
+        seed.seed_live_room(room)
+    elif body.seed:
         seed.seed_room(room)
     room.title = body.title.strip()[:60] or room.title
     if body.agenda.strip() or body.issues:               # 안건 제목이 비어도 쟁점은 남긴다
@@ -216,6 +218,20 @@ def _lan_ip() -> str:
         return ip
     except Exception:
         return "127.0.0.1"
+
+
+@app.delete("/api/rooms/{room_id}")
+async def delete_room(room_id: str, request: Request):
+    """방을 완전히 지운다. 리허설 뒤 같은 방 코드로 '빈 방'부터 다시 시작할 때 (reset_live.bat).
+    아무나 지우지 못하게 서버를 띄운 노트북에서 보낸 요청만 받는다."""
+    if not ROOM_RE.match(room_id):
+        raise HTTPException(400, "방 코드는 영문·숫자·-·_ 32자 이내예요.")
+    host = request.client.host if request.client else ""
+    if host not in ("127.0.0.1", "::1", "localhost", "testclient"):
+        raise HTTPException(403, "방 삭제는 서버를 띄운 노트북에서만 할 수 있어요.")
+    demo.stop(room_id)
+    existed = await hub.delete(room_id)
+    return {"ok": True, "deleted": existed}
 
 
 @app.get("/api/rooms/{room_id}/invite")
@@ -561,7 +577,10 @@ class DemoIn(BaseModel):
 
 @app.post("/api/demo/{room_id}/run")
 async def demo_run(room_id: str, body: DemoIn):
-    _room(room_id)
+    room = _room(room_id)
+    if room_id != "demo" and not {"jongwon", "hyejung", "jungmin", "dongjun"} <= set(room.personas):
+        # 시연 가이드의 첫 장면은 방을 시연용 시나리오로 덮어쓴다. 실전 방(빈 방에서 직접 만든 방)을 지키기 위해 막는다.
+        raise HTTPException(400, "시연 가이드는 시연용 시나리오로 만든 방에서만 실행돼요. 이 방은 직접 진행해 주세요.")
     if not 0 <= body.scene < len(demo.SCENES):
         raise HTTPException(400, "없는 장면이에요.")
     demo.start(room_id, body.scene, body.auto, body.speed)

@@ -291,3 +291,18 @@ def numbers(text: str) -> list[tuple[float, str, str]]:
 
 
 _JOSA_TAIL = re.compile(r"(은|는|이|가|을|를|의|에서|에|도|만|로|으로)$")
+
+
+# ---------------------------------------------------------------- 양보 불가 조건
+_RED_CUE = re.compile(r"(꼭|반드시|절대|양보\s*(?:못|할\s*수\s*없)|없으면\s*안|빠지면\s*안|빼면\s*안|유지해|유지하|남기|남겨|빼지\s*말)")
+_CLAUSE = re.compile(r"[.!?\n]+|(?:^|\s)(?:근데|그런데|다만|단,|하지만|그래도|대신)\s+")
+
+
+def red_line(text: str) -> str:
+    """한 줄 답에서 '이것만은 지켜야 한다'는 조건을 뽑는다 ('맞아 B안. 근데 공연 1팀은 꼭 남기자' → '공연 1팀은 꼭 남기는 게 좋겠어요').
+    모델이 양보 불가 조건을 따로 돌려주지 않을 때(규칙 대체 포함) 쓴다. 단서어가 없으면 빈 문자열."""
+    for clause in _CLAUSE.split(text or ""):
+        c = clause.strip(" ,")
+        if len(c) >= 4 and _RED_CUE.search(c):
+            return casual_to_polite(c).strip()
+    return ""

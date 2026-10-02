@@ -82,6 +82,31 @@ class Hub:
         self.gen[room.room_id] = self.gen.get(room.room_id, 0) + 1
         self.save_soon(room.room_id, 0.1)
 
+    async def delete(self, room_id: str) -> bool:
+        """방을 완전히 지운다 (시연 리허설 뒤 '빈 방'으로 되돌리기). 접속 중인 화면은 로비로 돌려보낸다."""
+        existed = self.exists(room_id)
+        me = asyncio.current_task() if _has_loop() else None
+        for task in [self.tasks.pop(room_id, None), *self.bg.pop(room_id, set())]:
+            if task and task is not me and not task.done():
+                task.cancel()
+        h = self._save_handles.pop(room_id, None)       # 예약된 저장이 지운 파일을 되살리지 않게
+        if h:
+            h.cancel()
+        for c in list(self.conns.get(room_id, [])):
+            try:
+                await c.ws.send_json({"type": "error", "code": "unknown_member", "text": "방이 지워졌어요. 새로 만들어 주세요."})
+                await c.ws.close(code=4404)
+            except Exception:
+                pass
+        for d in (self.rooms, self.conns, self.typing, self.gen, self.locks, self._lock_loops):
+            d.pop(room_id, None)
+        for p in (self.path(room_id), self.path(room_id).with_suffix(".tmp")):
+            try:
+                p.unlink()
+            except FileNotFoundError:
+                pass
+        return existed
+
     def save_soon(self, room_id: str, delay: float = 1.0) -> None:
         try:
             loop = asyncio.get_running_loop()

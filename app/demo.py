@@ -29,15 +29,17 @@ SCENES = [
     },
     {
         "id": 2, "title": "대리 참석: 2명이 빠져도 회의는 열린다", "metric": "개입 F1 · 근거 일치율",
-        "narration": "민수와 하은이 미니미를 켜고 빠집니다. 종원이 A안을 꺼내자, 민수의 미니미가 반론합니다. "
-                     "모든 문장에 출처 칩이 붙고, 오른쪽 '미니미의 머릿속'에서 왜 지금 말했는지 점수로 보입니다.",
+        "narration": "민수와 하은이 미니미를 켜고 빠집니다. 상호작용형이라, 종원이 A안을 꺼내자 민수의 미니미가 반론하고 "
+                     "하은의 미니미가 바로 이어서 조건을 붙입니다. 모든 문장에 출처 칩이 붙고, 미니미 말풍선을 누르면 "
+                     "왜 지금 말했는지 점수로 보입니다.",
         "focus": "gate",
         "steps": [
             {"do": "away", "uid": "minsu", "on": True}, {"do": "wait", "s": 0.5},
-            {"do": "away", "uid": "haeun", "on": True}, {"do": "wait", "s": 0.8},
+            {"do": "away", "uid": "haeun", "on": True}, {"do": "wait", "s": 0.6},
+            {"do": "mode", "mode": "interactive", "by": "jongwon"}, {"do": "wait", "s": 0.6},
             {"do": "say", "uid": "jongwon", "text": "오늘은 예산안부터 정하자. 나는 공연이 축제의 얼굴이라 A안이 현실적이라고 봐."},
-            {"do": "wait", "s": 1.4},
-            {"do": "say", "uid": "jihyun", "text": "오 데이터가 있으니까 설득력 있네. 하은이 생각은 어때?"},
+            {"do": "wait", "s": 2.2},
+            {"do": "say", "uid": "jihyun", "text": "오 둘 다 데이터가 있으니까 설득력 있네."},
         ],
     },
     {
@@ -224,6 +226,8 @@ async def _do(room_id: str, step: dict) -> None:
                 interview.confirm(p, st.id, True)
             await orchestrator.after_persona_change(room_id)
             await hub.broadcast(room_id, {"type": "prep_update", "user_id": p.user_id, "event": "confirm"})
+    elif kind == "mode":
+        await orchestrator.set_mode(room_id, step["mode"], step.get("by", ""))
     elif kind == "away":
         p = room.personas[step["uid"]]
         await _emit(room_id, step=f"{p.name}: 대리 참석 {'ON' if step['on'] else 'OFF'}")

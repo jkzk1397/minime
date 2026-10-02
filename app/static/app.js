@@ -481,7 +481,6 @@
     const cont = grouped(m, prev);
     const bubble = h('div', { class: 'bubble' });
     renderCited(bubble, m.text, meta.citations || []);
-    if (abst) bubble.append(h('span', { class: 'hint', text: '돌아오면 볼 질문으로 남겼어요' }));
     whyBubble(bubble, meta);
     const label = abst ? (abst === 'commit' ? '약속 보류' : '확인 필요') : (ACT[meta.act] || '');
     const stampTitle = [engineLabel(meta.engine), meta.dropped ? `출처 없는 문장 ${meta.dropped}개 삭제` : ''].filter(Boolean).join(' · ');
@@ -498,9 +497,12 @@
     while ((mm = re.exec(text))) {
       if (mm.index > last) el.append(document.createTextNode(text.slice(last, mm.index)));
       const c = byLabel[mm[1]];
-      if (c) el.append(h('button', { class: 'cite', type: 'button', title: '출처 보기', on: { click: e => showPopover(e.currentTarget, c) } }, mm[1].replace('문단', '')));
-      else el.append(document.createTextNode(mm[0]));
       last = re.lastIndex;
+      if (!c) { el.append(document.createTextNode(mm[0])); continue; }
+      const chip = h('button', { class: 'cite', type: 'button', title: '출처 보기', on: { click: e => showPopover(e.currentTarget, c) } }, mm[1].replace('문단', ''));
+      const punct = /^[.,!?)」』]+/.exec(text.slice(last));            // 칩 뒤 마침표가 홀로 다음 줄로 넘어가지 않게 붙여 둔다
+      if (punct) { el.append(h('span', { class: 'cite-wrap' }, chip, punct[0])); last += punct[0].length; re.lastIndex = last; }
+      else el.append(chip);
     }
     if (last < text.length) el.append(document.createTextNode(text.slice(last)));
   }

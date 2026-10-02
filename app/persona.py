@@ -337,6 +337,10 @@ async def compose(room: Room, uid: str, trigger: Message, act: str, issue_id: st
     if not sents:
         return {"text": "", "sentences": [], "citations": [], "engine": engine, "dropped": dropped}
     opener = _OPENER.get(act, "")
+    prev = room.messages[-1] if room.messages else None
+    if (prev and prev.kind == "mini" and prev.user_id != uid and (prev.meta or {}).get("reply_to") == trigger.id
+            and prev.user_id in room.personas and act in ("rebuttal", "agree_add")):
+        opener = f"{room.personas[prev.user_id].name} 님 미니미 말에 덧붙이면,"   # 같은 발언에 이어 말하면 앞 미니미를 받는다
     text = (opener + " " if opener else "") + " ".join(_with_tag(s) for s in sents)
     used = []
     for s in sents:

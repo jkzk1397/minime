@@ -155,4 +155,4 @@ async def refine(room: Room, uid: str, text: str) -> tuple[str, str]:
                                        temperature=0.4, max_tokens=240)
     if data and data.get("text", "").strip():
         return data["text"].strip(), engine
-    return ko.casual_to_polite(text), llm.RULE
+    return ko.casual_to_polite(text, keep_proposal=True), llm.RULE

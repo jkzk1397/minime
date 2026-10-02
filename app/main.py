@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import os
 import re
 import socket
 import time
@@ -69,6 +70,8 @@ async def lifespan(app: FastAPI):
     loop.run_in_executor(None, retrieval.warmup)       # 형태소 분석기 첫 호출 지연을 미리
     probe = asyncio.create_task(_probe_loop())
     hub.room("demo")
+    base = config.PUBLIC_URL or f"http://{_lan_ip()}:{os.getenv('PORT', '8000')}"
+    log.warning("팀원 접속 주소: %s/?room=demo  (같은 와이파이에서 휴대폰·노트북으로 접속)", base)
     yield
     probe.cancel()
     hub.save_all()
@@ -82,6 +85,8 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 def _room(room_id: str):
     if not ROOM_RE.match(room_id):
         raise HTTPException(400, "방 이름은 영문·숫자·-·_ 32자 이내예요.")
+    if room_id != "demo" and not hub.exists(room_id):
+        raise HTTPException(404, "없는 방이에요. '새 회의방 만들기'로 먼저 만들어 주세요.")
     return hub.room(room_id)
 
 
@@ -183,6 +188,7 @@ async def reset_room(room_id: str, body: ResetIn):
             p.touch()
     hub.replace(fresh)
     await hub.broadcast(room_id, {"type": "reset"})
+    await hub.kick_unknown(room_id)
     await orchestrator.broadcast_room(room_id)
     await orchestrator.broadcast_members(room_id)
     return {"ok": True}
@@ -554,6 +560,11 @@ async def ws_room(ws: WebSocket, room_id: str, uid: str):
     observer = ws.query_params.get("observer") == "1"
     if not ROOM_RE.match(room_id) or not UID_RE.match(uid):
         await ws.close(code=4400)
+        return
+    if room_id != "demo" and not hub.exists(room_id):
+        await ws.accept()
+        await ws.send_json({"type": "error", "code": "unknown_member", "text": "없는 방이에요."})
+        await ws.close(code=4404)
         return
     room = hub.room(room_id)
     if not observer and uid not in room.personas:

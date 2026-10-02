@@ -183,6 +183,7 @@ async def _do(room_id: str, step: dict) -> None:
         hub.replace(fresh)
         state(room_id)["done"] = []
         await hub.broadcast(room_id, {"type": "reset"})
+        await hub.kick_unknown(room_id)
         await orchestrator.broadcast_room(room_id)
         await orchestrator.broadcast_members(room_id)
         await _emit(room_id, step="방을 시연 시작 상태로 되돌렸어요")

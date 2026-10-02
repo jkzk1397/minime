@@ -1,46 +1,191 @@
-# MyMini backend (FastAPI + WebSocket)
+# MyMini — 빠진 사람의 미니미가 대신 회의에 들어가요
 
-사람과 AI 미니미가 한 방에서 회의하는 서버입니다. 키가 없으면 MOCK 모드로 돌아가서 바로 시연할 수 있습니다.
+리더도 진행 방식도 없는 학생·사회초년생 팀을 위한 **AI 회의 보조자**입니다.
+팀원의 보고서와 3분 입장 인터뷰로 만든 **'근거 있는 분신(미니미)'** 이
 
-> **"내가 회의에 못 가도, 내 미니미는 회의에 간다."**
+1. 못 온 사람 대신 회의에 들어가 **본인이 확인한 입장과 보고서에 있는 말만** 하고, 근거가 없으면 말하지 않고 질문으로 남깁니다.
+2. 참석한 사람의 결론을 **2차 검증**합니다 (근거 약함 · 이전 발언과 충돌 · 놓친 점 · 반대 관점).
+3. 불참자에게 영향을 주는 결정은 **보류**하고, 돌아온 사람이 승인하거나 이의를 답니다.
 
-## 문서
-| 문서 | 내용 |
-|---|---|
-| [기획서](docs/01-기획서.md) | 문제, 아이디어, 핵심 기능, 차별점, MVP 범위 |
-| [기술서](docs/02-기술서.md) | 구조, 오케스트레이터 동작 원리, API 명세, 로드맵 |
-| [데모 가이드](docs/03-데모-시나리오.md) | 실행 방법, 3분 발표 시나리오, 예상 질문 |
+> 발표 한 문장: **"빠진 사람의 미니미는 본인이 확인한 입장과 보고서에 있는 말만 하고, 없으면 입을 다문다."**
 
-발표용 데모는 `demo-v1.html`을 브라우저로 열면 서버 없이 바로 재생됩니다.
+기획서: [docs/PROJECT_OVERVIEW_v3.md](docs/PROJECT_OVERVIEW_v3.md) · 설계 노트(학습·입력·페르소나·정합성): [docs/04-설계-노트.md](docs/04-설계-노트.md) · 시연 가이드: [docs/03-시연-가이드.md](docs/03-시연-가이드.md)
 
-## 실행
+---
+
+## 1. 빠른 시작 (5분)
+
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # OPENAI_API_KEY를 넣으면 실제 LLM 사용
-uvicorn app.main:app --reload --port 8000
+# macOS / Linux
+./run.sh
+# Windows: run.bat 더블클릭
 ```
-브라우저 3개(또는 탭 3개)로 `http://localhost:8000` 을 열고 각각 종원/민수/지현으로 입장하세요.
 
-## WebSocket 프로토콜
-접속: `ws://HOST/ws/{room_id}/{user_id}`
+처음 실행하면 가상환경을 만들고 패키지를 설치한 뒤 `http://localhost:8000` 에 서버를 띄웁니다.
+**모델이 없어도 바로 동작합니다** — 이 경우 엔진 표시가 `규칙 대체`가 되고, 미니미는 입장 카드와 보고서 문장을 그대로 인용해 말합니다.
 
-클라이언트 -> 서버
-| type | 필드 | 설명 |
-|---|---|---|
-| message | text, mode(direct/delegate) | 직접 발언 / 한 줄만 말하고 미니미가 풀어쓰기 |
-| away | value(bool) | 자리 비움 on/off. off 시 본인에게만 부재 요약 전송 |
-| agenda | text | 안건 설정 |
-| end_meeting | - | 회의 결과 정리 |
+수동 실행:
+```bash
+python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                                     # Windows: copy .env.example .env
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
-서버 -> 클라이언트: `history`, `message`(kind: human/mini/system/tool/result/digest), `presence`, `orchestrator`(scores, pick, why), `typing`, `agenda`, `activity`
+---
 
-## 구조
-- `app/orchestrator.py` 점수 -> 선택 -> 발언을 MAX_ROUNDS까지 반복(AI끼리 토론). 자리 비운 사람 미니미 +0.3, 직전 발언자 제외.
-- `app/llm.py` score / reply / expand / digest / minutes. 키 없으면 MOCK.
-- `app/tools.py` 검색 Tool (Tavily 키 없으면 모의 결과).
-- `app/store.py` 인메모리 Hub. 다음 단계에서 PostgreSQL + pgvector로 교체.
+## 2. 해커톤 시연: 4명이 실제로 접속하기
 
-## 배포
-Railway/Render에서 start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-(WebSocket은 자동으로 wss로 올라갑니다.)
+1. 발표 노트북에서 서버를 띄웁니다 (`--host 0.0.0.0`). 서버 로그에 **`팀원 접속 주소: http://192.168.x.x:8000/?room=demo`** 가 찍힙니다.
+2. 노트북과 참가자 4명의 휴대폰·노트북을 **같은 와이파이(또는 휴대폰 핫스팟)** 에 연결합니다.
+   Windows는 처음 실행할 때 방화벽 창이 뜨면 **허용**을 누르세요.
+3. 회의방 상단 **[초대]** 를 누르면 QR이 나옵니다. 참가자는 스캔해서 **자기 자리(종원·민수·지현·하은)** 를 고릅니다.
+4. 발표 화면(빔 프로젝터)은 로비에서 **[발표 화면으로 보기 (관전)]** 으로 들어갑니다. 관전자는 자리를 차지하지 않고, 대시보드와 시연 가이드를 크게 보여 줍니다.
+5. **[시연 가이드]** 버튼으로 장면을 하나씩 실행합니다. 모든 접속자 화면이 같이 움직입니다.
+
+| # | 장면 | 보여 주는 것 | 연결 지표 |
+| --- | --- | --- | --- |
+| 0 | 팀과 안건 | 4인 팀, 쟁점 3개, 오늘 2명 불참 | 주제 부합성 |
+| 1 | 준비: 민수의 미니미 만들기 | 보고서 → 입장 카드 초안 → 빈 쟁점만 인터뷰 → '맞아요' → 준비도 1/3 → 3/3 | 페르소나 충실도 |
+| 2 | 대리 참석 | 민수·하은 불참. 종원이 A안 → 민수 미니미가 출처 칩과 함께 반론, 개입 점수 막대 | 개입 F1 · 근거 일치율 |
+| 3 | 침묵 | 보고서에 없는 질문 → "민수 님께 확인이 필요해요" / 날짜 약속 요청 → 보류 | 올바른 침묵률 |
+| 4 | 흐름 유지 | 잡담 2번 → 안건 거리 그래프 급등 → 회의 도우미가 남은 쟁점 상기 | 흐름 이탈 대응 |
+| 5 | 2차 검증과 보류 결정 | 지현의 결론 → 자동 보류 + 검증 카드(근거 약함·지난 발언 충돌·놓친 점·반대 관점) | 검증 탐지율 |
+| 6 | 모델이 꺼져도 계속 | 모델 끄기 → '규칙 대체'로 하은 미니미가 보고서를 인용해 답 | 기술성·완성도 |
+| 7 | 회의 종료 | 쟁점별 회의록 (확정·보류·확인 필요), .md 내보내기 | 회의 결과 정리 |
+| 8 | 복귀 | 민수의 '내가 빠진 사이': 승인 1 · 이의 1 · 남긴 질문에 답 → 확인된 입장으로 저장 | 현장 적용성 |
+
+실제 참가자 4명이 직접 대화해도 됩니다. 시연 가이드는 대사만 대신 입력할 뿐, **미니미의 판단·발언·검증·회의록은 매번 실제 모듈이 만듭니다.**
+자세한 멘트와 체크리스트: [docs/03-시연-가이드.md](docs/03-시연-가이드.md)
+
+---
+
+## 3. 모델 설정 — 로컬 → API → 규칙 대체
+
+엔진은 `.env`의 `LLM_ORDER` 순서대로 시도하고, 시간 초과·연결 실패·형식 오류가 나면 다음으로 넘어갑니다. 마지막엔 항상 규칙 대체가 있어 **회의가 멈추지 않습니다.**
+
+```bash
+# 로컬 모델 받기 (태그는 ollama.com에서 확인)
+ollama pull qwen3.5:4b      # 빠른 레인: 개입 판단 (생각 모드 끔, 짧은 출력)
+ollama pull qwen3.5:9b      # 생각 레인: 발언·검증·회의록
+ollama pull bge-m3          # 한국어 검색 임베딩 (없으면 내장 n-gram 벡터)
+```
+
+**로컬 모델이 잘 안 되면 `.env`에서 두 줄만 바꾸면 API로 갑니다.**
+
+```dotenv
+LLM_ORDER=api
+API_KEY=sk-...                      # OpenAI. Groq·Gemini·OpenRouter 예시는 .env.example 참고
+```
+
+- 상태 확인: `http://localhost:8000/health`, 회의방 오른쪽 **미니미의 머릿속 › 엔진** 탭 (레인별 엔진·지연 p50/p95·호출 추적·서킷 브레이커)
+- 시연용 **모델 끄기** 스위치: 엔진 탭 또는 시연 6장면
+- 레인별 시간 제한(`FAST_TIMEOUT`·`SLOW_TIMEOUT`), 형식 오류 1회 재시도, 연속 3번 실패하면 45초 동안 그 엔진을 건너뜀(서킷 브레이커)
+- 로컬은 Ollama 네이티브 API로 **JSON 스키마를 강제**(`format`)하고 생각 모드를 끕니다(`think:false`). API는 OpenAI 호환 `response_format`을 쓰고, 거부하면 프롬프트만으로 재시도합니다.
+
+---
+
+## 4. 기능
+
+| 사용자 기능 | 설명 |
+| --- | --- |
+| 내 미니미 준비 | ① 프로필(판단 기준·관심 키워드·관련 경험·말투 예시·위임 범위·동의) ② 보고서 붙여넣기/파일(txt·md·docx·pdf) ③ 빈 쟁점만 묻는 3분 인터뷰 ④ 입장 카드 확인·수정 ⑤ 준비도·대리 참석 |
+| 대리 참석 ON/OFF | 켜면 미니미가 대신 참석(준비도가 낮으면 경고). 돌아와서 끄면 본인에게만 **내가 빠진 사이** |
+| 미니미 참여 방식 | 개입형(기본, 가장 관련 있는 1명) · 상호작용형(최대 2명) · 호출형(`@이름`으로 부를 때만) |
+| 발언 다듬기 | 한 줄만 던지면 내 미니미가 다듬고, 올리기 전에 본인이 확인 |
+| 2차 검증 | 사람 메시지에 마우스를 올려 **2차 검증** → 주장 분해·Toulmin·근거 대조·수치 대조·반대 관점 카드 |
+| 결정과 보류 | "~로 가자" 같은 결정을 자동 기록. 불참자 관련이면 **보류** → 복귀자 승인·이의 |
+| 회의록 | 쟁점별 의견·충돌·결정 상태, 복귀 후 확인 질문, 다음 할 일. `.md` 내보내기 |
+| 안건 유지 | 안건 거리가 기준선 위로 2번 연속이면 회의 도우미가 남은 쟁점을 상기 |
+| 미니미의 머릿속 | 개입 판단(효용 점수 막대) · 근거(검색 문단·점수·임계값) · 안건 거리 그래프 · 엔진 상태 |
+| 기타 | QR 초대, 관전(발표) 화면, 모바일 하단 탭, 다크 모드, 자동 재접속, 내 기억 삭제, 서버 재시작해도 유지(JSON 저장) |
+
+미니미 발언은 항상 **'AI · ○○의 미니미'** 라벨, 점선 말풍선, 출처 칩으로 사람 말과 구분됩니다.
+
+---
+
+## 5. AI 구조 — 파인튜닝 없이 개인화
+
+**LLM + Memory + Persona + RAG + Prompt Context + Feedback → 개인화된 에이전트.** 모델 가중치는 건드리지 않습니다.
+
+| 구성 | MyMini에서 | 코드 |
+| --- | --- | --- |
+| Base LLM | 빠른 레인 `qwen3.5:4b`(판단) + 생각 레인 `qwen3.5:9b`(작성·검증) → API → 규칙 대체 | `app/llm.py` |
+| Personal Memory | 보고서 문단, 지난 회의 발언, 회의 중 본인 발언, 복귀 후 답한 질문, 회의 후 '추정' 기억 | `app/models.py`, `persona.infer_memory` |
+| Persona | 판단 기준·관심 분야·관련 경험·말투 예시 + **입장 카드**(주장·근거·판단 기준·양보 불가선·모르는 부분) + 위임 범위 | `models.Profile/Stance/Scope`, `app/interview.py` |
+| RAG | Kiwi 형태소 BM25 + 벡터(bge-m3) → RRF, 근거 점수 → 낮으면 침묵, 문장마다 출처 + 생성 후 출처 검사 | `app/retrieval.py`, `persona.compose` |
+| Prompt Context | 안건·현재 쟁점·최근 대화·검색 근거·판단 기준·위임 범위, 비슷한 상황의 라벨 예시 3개 자동 선택 | `prompts/*.md`, `gate.pick_examples` |
+| Feedback | 인터뷰 '맞아요/고칠래요', 입장 카드 대체, 보류 결정 승인·이의, 남긴 질문에 답하면 확인된 입장으로 | `interview.confirm`, `minutes.respond`, `orchestrator.answer_question` |
+
+| 모듈 | 역할 | 파일 |
+| --- | --- | --- |
+| M1 근거 페르소나 | 입장 카드·하이브리드 검색·출처 강제·생성 후 출처 검사·침묵 | `persona.py`, `retrieval.py`, `interview.py` |
+| M2 개입 게이트 | 규칙 필터 → 효용 U = 관련도 × 근거 × 새로움 × 입장 차이 − 비용 → 애매할 때만 작은 모델 | `gate.py` |
+| M3 2차 검증 | 원자 주장 → Toulmin → 검증 질문 → 내 자료·이전 발언·팀원 자료 대조 → 수치 대조 → 판정 카드 | `verify.py` |
+| M4 안건 이탈 | 쟁점 어휘 거리(LLM 없이 수 ms) → K턴 연속이면 (모델 확인 후) 상기 | `agenda.py` |
+| M5 회의록·보류 결정 | 결정 자동 감지 → 불참자 관련이면 보류 → 승인·이의, 쟁점별 회의록, 부재 요약 | `minutes.py` |
+| M6 기억·준비도 | 준비도 = 쟁점 중 근거가 있는 비율, 회의 후 입장 변화 후보를 '추정'으로 | `persona.py` |
+| 하네스 | 사람 발언 중심 상태 기계, 세대 번호 취소, 입력 중 대기, 레인별 시간 제한·서킷 브레이커 | `orchestrator.py`, `llm.py` |
+
+---
+
+## 6. 평가와 테스트
+
+```bash
+python eval/eval.py --sweep      # 지표 6개 + 검색·게이트 비교 + 침묵 임계값 스윕 → eval/results/latest.md
+python -m pytest -q              # 규칙·시나리오·4인 접속·엔진 대체 사슬(가짜 LLM 서버) 테스트
+```
+
+규칙 대체(모델 없음, 기준선 A) 결과 — 시드 평가 세트(질문 36 · 개입 라벨 28 · 심은 주장 22):
+
+| 지표 | 결과 | 기획서 목표 |
+| --- | --- | --- |
+| 근거 일치율 | 100% (31문장) | 90% 이상 |
+| 올바른 침묵률 / 잘못된 침묵 | 93.8% / 10.0% | 90% 이상 / 10% 이하 |
+| 개입 F1 | 0.83 (정밀도 0.86 · 재현율 0.80) | 사람 간 일치율 근접 |
+| 검증 탐지율 / 오탐 | 100% / 0% | 80% 이상 / 15% 이하 |
+| 입장 일치 (충실도 대리 지표) | 100% (5문항) | 80% 이상 |
+| 게이트 지연 p95 | 16 ms | 1초 안 |
+
+> 규모가 작은 시드 세트라 경향만 보여 줍니다. 침묵 임계값 `EVIDENCE_MIN=0.35`는 스윕으로 정했습니다.
+> 모델을 연결하면 같은 스크립트가 후보 C(규칙 + 작은 모델)·D(매번 모델)도 측정합니다.
+
+---
+
+## 7. 폴더 구조
+
+```
+app/
+  main.py          REST + WebSocket, QR 초대, 회의록 내보내기, 시연 API
+  orchestrator.py  사람 발언 중심 상태 기계 (안건 거리 → 결정 → 게이트 → 근거 발언)
+  llm.py           엔진 하네스: Ollama → OpenAI 호환 API → 규칙, 프롬프트 로더, 호출 추적
+  gate.py          M2   persona.py   M1·M6   interview.py  입장 인터뷰·발언 다듬기
+  verify.py        M3   agenda.py    M4      minutes.py    M5
+  retrieval.py     Kiwi BM25 + 벡터 + RRF + 근거 점수
+  ko.py            한국어 규칙(존댓말·활용·단서어·수치)   tools.py  웹 검색(선택)
+  store.py         방·접속·JSON 저장   models.py  데이터 모델   seed.py  시연 시나리오
+  demo.py          시연 가이드 장면 9개   static/  웹 클라이언트 (빌드 없음)
+prompts/           프롬프트 파일(버전 표기) + examples/ 게이트 라벨 예시
+eval/              평가 세트 + eval.py
+tests/             pytest + 가짜 LLM 서버
+docs/              기획서 v3, 설계 노트, 시연 가이드, legacy(v1)
+```
+
+## 8. WebSocket 프로토콜 (요약)
+
+접속: `ws://HOST/ws/{room_id}/{user_id}` (관전: `?observer=1`)
+
+- 클라이언트 → 서버: `message{text, refined_from?}` · `typing{on}` · `refine{text}` · `away{value}` · `agenda{title, issues[]}` · `mode{mode}` · `verify{message_id}` · `mark_decision{message_id}` · `decide{decision_id, action, note}` · `answer_question{question_id, text}` · `digest` · `end_meeting` · `ping`
+- 서버 → 클라이언트: `hello` · `room` · `members` · `history` · `message`(kind: human/mini/system/facilitator/decision/verify/result) · `gate` · `drift` · `typing` · `status` · `decision` · `away_digest` · `memory` · `refine` · `prep_update` · `demo` · `reset` · `error`
+
+회의 전 준비(프로필·보고서·인터뷰·입장 카드·질문 답)는 REST(`/api/rooms/{room}/members/{uid}/...`)로 합니다.
+
+## 9. 배포 전 점검
+
+| 항목 | 현황 |
+| --- | --- |
+| 인증 | 없음 (해커톤용). 같은 방 코드와 자리만 알면 들어올 수 있음 → 배포 땐 로그인 필요 |
+| CORS | `ALLOW_ORIGINS` 로 제한 가능 (기본 `*`) |
+| 저장소 | `data/rooms/*.json`. 배포 땐 PostgreSQL + pgvector |
+| 개인정보 | 보고서·발언 기억은 동의 항목, 언제든 '내 기억 삭제'. 로컬 모델이면 보고서가 노트북 밖으로 나가지 않음 |
+| AI 표시 | 미니미 발언은 항상 라벨·색·점선으로 구분 |

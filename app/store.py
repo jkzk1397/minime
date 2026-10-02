@@ -120,6 +120,18 @@ class Hub:
         if conn in lst:
             lst.remove(conn)
 
+    async def kick_unknown(self, room_id: str) -> None:
+        """방을 다시 채운 뒤, 더 이상 없는 팀원으로 접속한 화면은 로비로 돌려보낸다."""
+        room = self.room(room_id)
+        for c in list(self.conns.get(room_id, [])):
+            if not c.observer and c.uid not in room.personas:
+                try:
+                    await c.ws.send_json({"type": "error", "code": "unknown_member", "text": "방이 초기화돼 자리가 없어졌어요."})
+                    await c.ws.close(code=4404)
+                except Exception:
+                    pass
+                self.disconnect(room_id, c)
+
     def online(self, room_id: str) -> set[str]:
         return {c.uid for c in self.conns.get(room_id, []) if not c.observer}
 

@@ -1,6 +1,14 @@
+# 필수
 fastapi>=0.110
 uvicorn[standard]>=0.29
-websockets>=12.0
 httpx>=0.27
-openai>=1.30
 python-dotenv>=1.0
+python-multipart>=0.0.9
+numpy>=1.26
+kiwipiepy>=0.18          # 한국어 형태소 분석 (BM25). 설치가 안 되면 간이 토크나이저로 자동 대체
+qrcode>=7.4              # 초대 QR (없으면 주소만 표시)
+
+# 선택
+# pypdf>=4.0             # PDF 보고서 텍스트 추출
+# docling>=2.0           # PDF·DOCX 문단·표 변환 (무거움)
+# pytest>=8.0            # 테스트

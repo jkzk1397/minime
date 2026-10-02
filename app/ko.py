@@ -51,6 +51,53 @@ def ida(word: str) -> str:
     return "이에요" if has_batchim(word) else "예요"
 
 
+
+# ---------------------------------------------------------------- '-ㄴ다/-는다' → '-아요/-어요' (자모 계산)
+_IRREG = {"만든다": "만들어요", "든다": "들어요", "논다": "놀아요", "안다": "알아요", "판다": "팔아요", "운다": "울어요",
+          "연다": "열어요", "건다": "걸어요", "듣는다": "들어요", "걷는다": "걸어요", "돕는다": "도와요", "짓는다": "지어요",
+          "낫는다": "나아요", "붓는다": "부어요", "줍는다": "주워요", "눕는다": "누워요"}
+_MED_TO = {20: 6, 8: 9, 13: 14, 11: 10}          # ㅣ→ㅕ, ㅗ→ㅘ, ㅜ→ㅝ, ㅚ→ㅙ
+
+
+def _syl(ini: int, med: int, fin: int = 0) -> str:
+    return chr(0xAC00 + ini * 588 + med * 28 + fin)
+
+
+def _parts(ch: str):
+    c = ord(ch) - 0xAC00
+    return (c // 588, (c % 588) // 28, c % 28) if 0 <= c <= 11171 else None
+
+
+def conj_nda(word: str) -> str | None:
+    """'걸린다'→'걸려요', '닫는다'→'닫아요', '쓴다'→'써요'. 모르는 형태면 None."""
+    for k, v in _IRREG.items():
+        if word.endswith(k):
+            return word[: -len(k)] + v
+    if word.endswith("는다") and len(word) >= 3:
+        stem = word[:-2]
+        p = _parts(stem[-1])
+        if not p or p[2] == 0:
+            return None
+        return stem + ("아요" if p[1] in (0, 8) else "어요")
+    if word.endswith("다") and len(word) >= 2:
+        p = _parts(word[-2])
+        if not p or p[2] != 4:                     # 받침 ㄴ이어야 '-ㄴ다'
+            return None
+        ini, med, _ = p
+        head = word[:-2]
+        if ini == 18 and med == 0:                 # 한다 → 해요
+            return head + "해요"
+        if med == 18:                              # ㅡ 탈락: 쓴다→써요, 바쁜다(드묾)
+            prev = _parts(head[-1]) if head else None
+            return head + _syl(ini, 0 if prev and prev[1] in (0, 8) else 4) + "요"
+        if med in _MED_TO:
+            return head + _syl(ini, _MED_TO[med]) + "요"
+        if med in (16, 19):                        # ㅟ, ㅢ → '쉬어요'
+            return head + _syl(ini, med) + "어요"
+        return head + _syl(ini, med) + "요"         # ㅏ ㅓ ㅐ ㅔ ㅕ ㅘ ㅝ ㅙ: 간다→가요, 선다→서요
+    return None
+
+
 # ---------------------------------------------------------------- 존댓말
 _WRITTEN = [
     (r"생각한다$", "생각해요"), (r"해야 한다$", "해야 해요"), (r"겠다$", "겠어요"),
@@ -92,6 +139,11 @@ def polite(sentence: str) -> str:
     for pat, rep in _WRITTEN:
         if re.search(pat, body):
             return re.sub(pat, rep, body) + tail + punct
+    m2 = re.search(r"([가-힣]+)$", body)
+    if m2 and re.search(r"(ㄴ다|는다|[가-힣]다)$", m2.group(1)):
+        conj = conj_nda(m2.group(1))
+        if conj:
+            return body[: m2.start()] + conj + tail + punct
     for pat, rep in _CASUAL:
         if re.search(pat, body):
             return re.sub(pat, rep, body) + tail + punct
@@ -102,8 +154,29 @@ def polite(sentence: str) -> str:
     return body + tail + punct
 
 
-def casual_to_polite(text: str) -> str:
-    """한 줄 답('맞아 B안. 근데 공연 1팀은 남기자')을 풀어 쓴 존댓말 문장들로."""
+def _add_n(stem: str) -> str:
+    p = _parts(stem[-1]) if stem else None
+    if not p:
+        return stem + "는"
+    if p[2] == 0:
+        return stem[:-1] + _syl(p[0], p[1], 4)      # 하 → 한, 남기 → 남긴
+    return stem + "는"
+
+
+def proposal(sentence: str) -> str:
+    """'그럼 영상으로 하자' → '그럼 영상으로 해요' (제안의 뜻을 유지한 존댓말)."""
+    s = sentence.strip()
+    m = re.search(r"([가-힣]+)자([.!~]*)$", s)
+    if not m or len(m.group(1)) < 1:
+        return polite(s)
+    stem = m.group(1)
+    conj = conj_nda(_add_n(stem) + "다")
+    return (s[: m.start()] + conj + ".") if conj else polite(s)
+
+
+def casual_to_polite(text: str, keep_proposal: bool = False) -> str:
+    """한 줄 답('맞아 B안. 근데 공연 1팀은 남기자')을 풀어 쓴 존댓말 문장들로.
+    keep_proposal=True면 '~하자'를 '~해요'로 (회의 발언 다듬기), 아니면 '~하는 게 좋겠어요' (입장 문장)."""
     t = text.strip()
     t = re.sub(r"\s+", " ", t)
     lead = ""
@@ -118,7 +191,7 @@ def casual_to_polite(text: str) -> str:
         if not p:
             continue
         p = re.sub(r"^근데\s*", "다만 ", p)
-        out.append(polite(p))
+        out.append(proposal(p) if keep_proposal and re.search(r"[가-힣]자$", p) else polite(p))
     return " ".join(([lead] if lead else []) + out).strip()
 
 
@@ -137,7 +210,7 @@ QUESTION = re.compile(r"(\?|까$|까\?|니\?|냐|어때|어떻게 생각|생각�
 DECISION = re.compile(r"(으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정|확정|정하자|그렇게\s?하자|합시다|결론|"
                       r"으?로\s?정해|이대로\s?가|하기로|맡는\s?걸로|맡기로)")
 DECISION_STRONG = re.compile(r"(으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정하|확정|결론|이대로\s?가|하기로|맡는\s?걸로|"
-                             r"맡기로|으?로\s?정하자|으?로\s?정해)")
+                             r"맡기로|으?로\s?정하자|으?로\s?정해|으?로\s?(해요|가요|합시다|하죠|가죠|갑시다))")
 FACT_Q = re.compile(r"(알아봤|몇\s?(명|개|번|시|일|원|%|곳|팀)?|언제|얼마|어디|누가|누구|업체|날짜|정확히|구체적으로)")
 OPINION_Q = re.compile(r"(생각|의견|어때|어떻게\s?(봐|보|생각)|입장|찬성|반대|동의|괜찮|어느\s?쪽|싶은|싶어|원하|원해|맡고|맡을|선호)")
 _STRONG_FACT = re.compile(r"(알아봤|몇\s?(명|개|번|시|일|원|%|곳|팀)|언제|얼마|어디|업체|날짜)")

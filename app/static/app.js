@@ -160,7 +160,8 @@
       }
     } catch (e) {
       $('#lobbyRoom').hidden = true;
-      if (/찾을 수|404/.test(e.message)) toast('방을 찾을 수 없어요.', 'bad'); else toast(e.message, 'bad');
+      toast(e.message, 'bad');
+      if (/없는 방/.test(e.message)) { const d = $('details.new-room'); d.open = true; d.querySelector('[name=room_id]').value = roomId; }
     }
   }
 
@@ -209,7 +210,7 @@
     ws.onclose = ev => {
       clearInterval(S.pingT);
       if (S.ws !== ws || S.closedByUser) return;
-      if (ev.code === 4404) { store.del('mymini.session'); toast('방에 없는 팀원이에요. 다시 자리를 골라 주세요.', 'bad'); showLobby(S.roomId); return; }
+      if (ev.code === 4404) { store.del('mymini.session'); toast('방에 없는 팀원이거나 방이 바뀌었어요. 다시 자리를 골라 주세요.', 'bad'); showLobby(S.roomId); return; }
       $('#connBanner').hidden = false;
       const wait = Math.min(8000, 600 * 2 ** S.retry++);
       setTimeout(() => { if (S.ws === ws) connect(); }, wait);
@@ -1119,6 +1120,16 @@
     const title = h('input', { placeholder: '보고서 제목 (예: 자료조사 보고서)', maxlength: 60 });
     const text = h('textarea', { rows: 7, placeholder: '보고서 내용을 붙여 넣으세요. 빈 줄로 문단을 나누면 [보고서 2문단]처럼 문단 단위로 인용돼요.' });
     const add = h('button', { class: 'btn primary', type: 'button' }, icon('spark'), '올리고 입장 카드 초안 만들기');
+    const tpl = h('button', { class: 'btn ghost sm', type: 'button', title: '빈 줄로 나뉜 5문단 틀을 넣어요' }, icon('doc'), '보고서 틀 넣기');
+    tpl.addEventListener('click', () => {
+      if (text.value.trim() && !text.value.includes('(예:')) { toast('내용이 있어서 틀을 넣지 않았어요.'); return; }
+      text.value = ['조사한 사실 1: (숫자와 출처를 같이. 예: 작년 축제 만족도 조사에서 부스는 4.2점이었다)',
+        '조사한 사실 2 또는 사례: (예: 한 대학은 공연을 1팀으로 줄이고도 방문객이 15% 늘었다)',
+        '그래서 내 입장: 나는 ___이 좋다고 생각한다. 이유는 ___ 때문이다.',
+        '조건: 다만 ___은 양보할 수 없다.',
+        '아직 모르는 것: ___은 확인이 필요하다.'].join('\n\n');
+      text.focus();
+    });
     const after = res => {
       S.prep.data = res.member;
       toast(res.candidates ? `입장 카드 초안 ${res.candidates}개를 만들었어요 (${engineLabel(res.engine)}). 인터뷰에서 확인해 주세요.` : '보고서를 올렸어요. 입장이 드러난 문단은 찾지 못했어요. 인터뷰로 채워 주세요.');
@@ -1148,7 +1159,7 @@
       h('label', { class: 'field' }, h('span', { text: '제목' }), title),
       h('label', { class: 'field' }, h('span', { text: '내용' }), text),
       drop, file,
-      h('div', { class: 'row', style: 'justify-content:flex-end' }, add),
+      h('div', { class: 'row', style: 'justify-content:space-between' }, tpl, add),
       d.reports.length ? h('div', { class: 'section-title', text: `올린 보고서 ${d.reports.length}개` }) : null,
       d.reports.map(rep => h('div', { class: 'report' },
         h('div', { class: 'report-head' }, icon('doc'), h('span', { class: 't', text: rep.title }), chip(`${rep.paragraphs.length}문단`),
@@ -1165,7 +1176,7 @@
       try { const res = await prepApi('POST', '/interview/plan'); S.prep.data = res.member; if (!res.questions.length) toast('모든 쟁점에 확인된 입장이 있어요. 더 물어볼 게 없어요.'); renderPrep(); } catch (e) { toast(e.message, 'bad'); busy(plan, false); }
     });
     return [
-      h('div', { class: 'guide' }, h('b', { text: `쟁점 ${r.total}개 중 ${r.covered}개에 근거가 있어요. 빈 곳만 물어볼게요 (약 3분)` }),
+      h('div', { class: 'guide' }, h('b', { text: r.confirmed >= r.total ? `쟁점 ${r.total}개 모두 확인된 입장이 있어요` : `쟁점 ${r.total}개 중 확인된 입장 ${r.confirmed}개 · 보고서 근거 ${r.covered - r.confirmed}개. 초안 확인과 빈 곳만 물어볼게요 (약 3분)` }),
         h('div', { text: '한 줄로 대충 답해도 돼요. 미니미가 풀어 쓴 문장을 보여 주면 "맞아요"를 눌러 주세요. 확인한 문장만 근거가 돼요.' })),
       h('div', { class: 'row' }, plan),
       qs.length ? qs.slice().sort((a, b) => ({ open: 0, answered: 1, confirmed: 2, skipped: 3 }[a.status] - { open: 0, answered: 1, confirmed: 2, skipped: 3 }[b.status])).map(q => qaBox(q, d)) : null,

@@ -283,8 +283,7 @@
     $('#roomMark').textContent = (r.title || r.room_id || 'M').trim().slice(0, 1);
     $('#roomTitle').textContent = r.title || r.room_id;
     $('#agendaTitle').textContent = r.agenda || '안건을 정해 주세요';
-    $('#modeLabel').textContent = MODE_KO[r.mode] || '개입형';
-    $$('#modeMenu button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === r.mode)));
+    $$('#meMenu [data-mode]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === (r.mode || 'intervene'))));
     renderIssues(); renderDecisions(); renderHeadTitle(); renderMeeting(); refreshDecisionCards();
     if (S.digest && S.digest.preview) panels().renderDigest();
   }
@@ -311,17 +310,18 @@
   }
   function renderIssues() {
     const issues = (S.room && S.room.issues) || [];
-    fill($('#issueList'), issues.length ? issues.map((it, i) => h('li', { class: `issue${it.id === S.room.current_issue ? ' current' : ''}`, title: (ISTATUS[it.status] || [''])[0] },
-      h('span', { class: 'n', text: i + 1 }),
-      h('span', { class: 't' }, it.title, it.options && it.options.length ? h('span', { class: 'opts', text: it.options.map(o => o.label).join(' · ') }) : null),
-      h('span', { class: `st ${it.status}` }))) : h('li', { class: 'empty', text: '쟁점을 추가해 주세요' }));
+    fill($('#issueList'), issues.length ? issues.map((it, i) => h('li', { class: `issue${it.id === S.room.current_issue ? ' current' : ''}`, 'data-status': it.status || 'open', title: (ISTATUS[it.status] || [''])[0] },
+      h('span', { class: 'num' }, it.status === 'decided' ? icon('check', 'xs') : String(i + 1)),
+      h('span', { class: 't', text: it.title }),
+      it.options && it.options.length ? h('span', { class: 's', text: it.options.map(o => o.label).join(' · ') }) : null))
+      : h('li', { class: 'empty', text: '쟁점을 추가해 주세요' }));
   }
   function renderDecisions() {
     const ds = (S.room && S.room.decisions) || [];
     $('#decisionCount').textContent = ds.length ? ds.length : '';
     fill($('#decisionList'), ds.length ? ds.slice().reverse().map(d => {
-      const [label, cls] = DSTATUS[d.status] || ['', ''];
-      return h('li', { class: 'decision' }, tag(label, cls), h('span', { class: 't', text: d.text }));
+      const [label] = DSTATUS[d.status] || [''];
+      return h('li', { class: 'dec', 'data-status': d.status || '', title: label }, h('span', { class: 'dot' }), h('span', { class: 't', text: d.text }));
     }) : h('li', { class: 'empty', text: '아직 없어요' }));
   }
   function renderMembers() {
@@ -329,12 +329,13 @@
     $('#presenceCount').textContent = `${online}/${S.members.length}`;
     fill($('#memberList'), S.members.map(m => {
       const r = m.readiness || { covered: 0, total: 0 };
-      const sub = m.mini_on ? '미니미가 대리 참석 중' : `${m.role || '역할 미정'}${m.online ? '' : ' · 오프라인'}`;
-      return h('li', { class: `member c${m.color || 0}` }, avatar(m, { mini: m.mini_on, online: m.mini_on ? null : m.online }),
-        h('div', { class: 'info' },
+      const st = m.mini_on ? '미니미가 대신 참석' : m.online ? (m.role || '대화 중') : '오프라인';
+      return h('li', { class: `member c${m.color || 0}${m.mini_on ? ' away' : ''}${!m.online && !m.mini_on ? ' offline' : ''}` },
+        avatar(m, { mini: m.mini_on, online: m.mini_on ? null : m.online }),
+        h('div', { class: 'grow' },
           h('div', { class: 'nm' }, m.name, m.user_id === S.me ? h('span', { class: 'me', text: '나' }) : null),
-          h('div', { class: `sub${m.mini_on ? ' mini' : ''}`, text: sub })),
-        h('span', { class: `ready${r.ready ? ' full' : ''}`, title: '준비도: 쟁점 중 근거가 있는 비율', text: `${r.covered}/${r.total}` }));
+          h('div', { class: 'st', text: st })),
+        h('span', { class: `rd${r.ready ? ' full' : ''}`, title: '준비도: 쟁점 중 근거가 있는 비율', text: `${r.covered}/${r.total}` }));
     }));
   }
   function renderAvatarStack() {
@@ -423,7 +424,7 @@
       case 'mini': el = miniRow(m, prev); break;
       case 'facilitator': el = facilitatorCard(m); break;
       case 'decision': el = decisionCard(m); break;
-      case 'verify': el = verifyCard(m); break;
+      case 'verify': el = verifyCard(m, prev); break;
       case 'result': el = resultCard(m); break;
       default: el = h('div', { class: 'sys', text: m.text });
     }
@@ -453,6 +454,26 @@
         h('div', { class: 'line' }, h('div', { class: 'bubble', text: m.text }), stamp)),
       acts);
   }
+  // 다른 주인의 미니미가 바로 이어 말하면 한 줄기 대화로 잇는다
+  const isMiniLike = m => !!m && (m.kind === 'mini' || m.kind === 'verify');
+  const ownerOf = m => (m.kind === 'verify' ? (m.meta || {}).requester : m.user_id);
+  const chained = (m, prev) => isMiniLike(prev) && ownerOf(prev) !== ownerOf(m) && m.ts - prev.ts < 180;
+  const miniHead = (mem, label) => h('div', { class: 'who' }, `${mem.name}의 미니미`, h('span', { class: 'ai', text: label ? `AI · ${label}` : 'AI' }));
+
+  // 미니미 말풍선을 누르면 왜 말했는지(개입 판단 · 근거)를 서랍으로 연다
+  function whyBubble(bubble, meta) {
+    bubble.setAttribute('role', 'button');
+    bubble.tabIndex = 0;
+    bubble.title = '왜 이렇게 말했는지 보기';
+    const open = e => {
+      if (e.target.closest('.cite, a, summary, details, button')) return;
+      if (meta.reply_to && S.gateByMsg.has(meta.reply_to)) showGateFor(meta.reply_to);
+      else { openRight(); setTab('evidence', true); }
+    };
+    bubble.addEventListener('click', open);
+    bubble.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
+    return bubble;
+  }
   function miniRow(m, prev) {
     const mem = S.byId[m.user_id] || { name: nameOf(m.user_id), color: 0 };
     const meta = m.meta || {};
@@ -460,17 +481,15 @@
     const cont = grouped(m, prev);
     const bubble = h('div', { class: 'bubble' });
     renderCited(bubble, m.text, meta.citations || []);
+    if (abst) bubble.append(h('span', { class: 'hint', text: '돌아오면 볼 질문으로 남겼어요' }));
+    whyBubble(bubble, meta);
     const label = abst ? (abst === 'commit' ? '약속 보류' : '확인 필요') : (ACT[meta.act] || '');
-    return h('div', { class: `row mini other c${mem.color || 0} ${cont ? 'cont' : 'first'}${abst ? ' abstain' : ''}` },
+    const stampTitle = [engineLabel(meta.engine), meta.dropped ? `출처 없는 문장 ${meta.dropped}개 삭제` : ''].filter(Boolean).join(' · ');
+    return h('div', { class: `row mini other c${mem.color || 0} ${cont ? 'cont' : 'first'}${!cont && chained(m, prev) ? ' chain' : ''}${abst ? ' abstain' : ''}` },
       avatar(mem, { mini: true }),
       h('div', { class: 'col' },
-        cont ? null : h('div', { class: 'who' }, `${mem.name}의 미니미`, h('span', { class: 'ai', text: label ? `AI · ${label}` : 'AI' })),
-        h('div', { class: 'line' }, bubble, h('span', { class: 'stamp', text: fmtTime(m.ts) })),
-        h('div', { class: 'mini-meta' },
-          h('span', { text: engineLabel(meta.engine) }),
-          meta.dropped ? h('span', { title: '출처가 뒷받침하지 않아 지운 문장' }, `출처 없는 문장 ${meta.dropped}개 삭제`) : null,
-          abst ? h('span', { text: '돌아오면 볼 질문으로 남김' }) : null,
-          meta.reply_to ? h('button', { type: 'button', on: { click: () => showGateFor(meta.reply_to) } }, '왜 말했나요?') : null)));
+        cont ? null : miniHead(mem, label),
+        h('div', { class: 'line' }, bubble, h('span', { class: 'stamp', title: stampTitle, text: fmtTime(m.ts) }))));
   }
   function renderCited(el, text, citations) {
     const byLabel = Object.fromEntries((citations || []).map(c => [c.label, c]));
@@ -497,45 +516,46 @@
     pop.style.top = `${r.bottom + 8}px`;
     requestAnimationFrame(() => { const ph = pop.offsetHeight; if (r.bottom + 8 + ph > innerHeight - 12) pop.style.top = `${Math.max(12, r.top - ph - 8)}px`; });
   }
-  function cardRow(ic, card) {
-    return h('div', { class: 'card-row' }, h('span', { class: 'lead' }, icon(ic)), card);
+  // 회의 도우미(규칙 기반 진행 봇)의 말풍선
+  function botRow(cls, kids, ts) {
+    return h('div', { class: `row bot other first${cls ? ` ${cls}` : ''}` },
+      h('span', { class: 'av bot', 'aria-hidden': 'true' }, icon('spark')),
+      h('div', { class: 'col' }, h('div', { class: 'who', text: '회의 도우미' }),
+        h('div', { class: 'line' }, h('div', { class: 'bubble' }, kids), ts ? h('span', { class: 'stamp', text: fmtTime(ts) }) : null)));
   }
   function facilitatorCard(m) {
-    const rem = (m.meta && m.meta.remaining) || [];
-    return cardRow('hash', h('div', { class: 'card soft facilitator' },
-      h('div', { class: 'card-body' }, h('div', { text: m.text }),
-        rem.length ? h('div', { class: 'meta', text: `회의 도우미 · 남은 쟁점 ${rem.length}개` }) : h('div', { class: 'meta', text: '회의 도우미' }))));
+    return botRow('', [m.text], m.ts);
   }
 
-  // ---- 결정 카드
+  // ---- 결정: 대화 사이에 끼는 작은 알림
   function liveDecision(id, fallback) {
     return ((S.room && S.room.decisions) || []).find(d => d.id === id) || fallback || {};
   }
   function decisionCard(m) {
-    const card = h('div', { class: 'card decision-card' });
+    const el = h('div', { class: 'event decision' });
     const id = m.meta && m.meta.decision && m.meta.decision.id;
-    card.dataset.decisionId = id || '';
-    fillDecision(card, liveDecision(id, m.meta && m.meta.decision));
-    return cardRow('flag', card);
+    el.dataset.decisionId = id || '';
+    fillDecision(el, liveDecision(id, m.meta && m.meta.decision));
+    return el;
   }
-  function fillDecision(card, d) {
-    const [label, cls] = DSTATUS[d.status] || ['', ''];
+  function fillDecision(el, d) {
+    const [label] = DSTATUS[d.status] || [''];
+    el.dataset.status = d.status || '';
     const responses = d.responses || {};
     const affected = d.affected || [];
     const canDecide = S.me && !S.observer && !responses[S.me]
       && ((affected.includes(S.me) && d.status === 'pending') || d.status === 'needs_check');
-    fill(card,
-      h('div', { class: 'card-head' }, h('span', { class: 'title', text: '결정' }), tag(label, cls)),
-      h('div', { class: 'card-body' },
-        h('div', { class: 'big', text: d.text }),
-        h('div', { class: 'meta', text: [d.by_name ? `${d.by_name} 님 발언` : '', d.issue_title, d.status === 'pending' ? '불참자와 관련돼 보류됐어요' : ''].filter(Boolean).join(' · ') }),
-        affected.length ? h('div', { class: 'resp' }, affected.map(u => {
+    const why = [d.by_name ? `${d.by_name} 님 발언` : '', d.issue_title, d.status === 'pending' ? '불참자와 관련돼 보류됐어요' : ''].filter(Boolean).join(' · ');
+    fill(el,
+      h('div', { class: 'event-pill', title: why },
+        icon('flag', 'xs'), h('b', { text: `결정 ${label}` }), h('span', { class: 't', text: d.text }),
+        affected.length ? h('span', { class: 'resp' }, affected.map(u => {
           const r = responses[u];
           return h('span', { class: `who-chip c${colorOf(u)}` }, avatar(S.byId[u] || { name: nameOf(u) }, { size: 'xs' }), nameOf(u),
             h('span', { class: `s ${r ? (r.action === 'approve' ? 'ok' : 'bad') : ''}`, text: r ? (r.action === 'approve' ? '승인' : '이의') : '확인 전' }));
-        })) : null,
-        Object.entries(responses).filter(([, r]) => r.note).map(([u, r]) => h('div', { class: 'note-line' }, h('b', { text: `${nameOf(u)} ` }), r.note)),
-        canDecide ? decideForm(d) : null));
+        })) : null),
+      Object.entries(responses).filter(([, r]) => r.note).map(([u, r]) => h('div', { class: 'note-line' }, h('b', { text: `${nameOf(u)} ` }), r.note)),
+      canDecide ? decideForm(d) : null);
   }
   function decideForm(d, after) {
     const note = h('input', { placeholder: '이의가 있으면 이유 (선택)', maxlength: 300 });
@@ -557,33 +577,42 @@
   }
   function refreshDecisionCards() {
     if (!S.room) return;
-    $$('.decision-card[data-decision-id]').forEach(el => {
+    $$('.event.decision[data-decision-id]').forEach(el => {
       const d = S.room.decisions.find(x => x.id === el.dataset.decisionId);
       if (d) fillDecision(el, d);
     });
-    $$('.card-row[data-kind="result"]').forEach(el => {             // 회의록 안의 결정 상태도 최신으로
-      const m = S.messages.find(x => x.id === el.dataset.id);
-      if (m) { const fresh = resultCard(m); fresh.dataset.id = m.id; S.msgEls.set(m.id, fresh); el.replaceWith(fresh); }
-    });
+    if (S.minutesOpen && !$('#modal').hidden) {                     // 열려 있는 회의록의 결정 상태도 최신으로
+      const m = S.messages.find(x => x.id === S.minutesOpen);
+      const old = $('#modalBody .result-card');
+      if (m && old) old.replaceWith(minutesBody(m));
+    }
   }
 
-  // ---- 2차 검증 카드
-  function verifyCard(m) {
+  // ---- 2차 검증: 부탁한 사람의 미니미가 대화로 알려 준다
+  function verifyCard(m, prev) {
     const v = m.meta || {};
-    const req = S.byId[v.requester] || { name: nameOf(v.requester) };
+    const req = S.byId[v.requester] || { name: nameOf(v.requester), color: colorOf(v.requester) };
     const sp = S.byId[v.speaker] || { name: nameOf(v.speaker) };
-    const card = h('div', { class: `card verify-card c${req.color || 0}` },
-      h('div', { class: 'card-head' }, h('span', { class: 'title', text: `${req.name}의 미니미 · 2차 검증` }),
-        h('span', { class: 'meta', text: (v.labels || []).join(' · ') })),
-      h('div', { class: 'card-body' },
-        h('div', { class: 'quote' }, `${sp.name}: ${v.target_text || ''}`),
+    const items = [
+      ...(v.claims || []).map(c => {
+        const [vl, vc] = VERDICT[c.verdict] || ['판정 없음', 'info'];
+        return h('li', { class: vc || 'info' }, h('b', { class: 'k', text: vl }), h('span', { text: c.note || c.claim }));
+      }),
+      ...(v.missed || []).map(x => h('li', { class: 'warn' }, h('b', { class: 'k', text: '놓친 점' }), h('span', { text: x }))),
+      v.devil ? h('li', { class: 'info' }, h('b', { class: 'k', text: '반대 관점' }), h('span', { text: v.devil.text }),
+        v.devil.cite ? h('span', { class: 's', text: v.devil.cite }) : null) : null,
+    ];
+    const target = v.target_text || '';
+    const bubble = h('div', { class: 'bubble' },
+      h('p', { class: 'lead' }, `${sp.name} 님 말을 확인해 봤어요`, target ? h('span', { class: 'q', text: ` "${target.length > 40 ? `${target.slice(0, 40)}…` : target}"` }) : null),
+      h('ul', { class: 'vlist' }, items),
+      (v.claims || []).length ? h('details', { class: 'more' }, h('summary', { text: '자세히' }),
         h('div', { class: 'claims' }, (v.claims || []).map(claimRow)),
-        (v.missed || []).length || v.devil ? h('div', { class: 'points' },
-          (v.missed || []).map(x => h('div', { class: 'point' }, h('span', { class: 'k', text: '놓친 점' }), h('span', { text: x }))),
-          v.devil ? h('div', { class: 'point' }, h('span', { class: 'k', text: '반대 관점' }),
-            h('span', {}, v.devil.text, v.devil.cite ? h('span', { class: 's', text: v.devil.cite }) : null)) : null) : null,
-        h('div', { class: 'meta', text: `고칠지는 사람이 정해요 · ${engineLabel(v.engine)}` })));
-    return cardRow('shield', card);
+        h('div', { class: 'hint', text: `고칠지는 사람이 정해요 · ${engineLabel(v.engine)}` })) : null);
+    return h('div', { class: `row mini verify other c${req.color || 0} first${chained(m, prev) ? ' chain' : ''}` },
+      avatar(req, { mini: true }),
+      h('div', { class: 'col' }, miniHead(req, '검증'),
+        h('div', { class: 'line' }, bubble, h('span', { class: 'stamp', text: fmtTime(m.ts) }))));
   }
   function claimRow(c) {
     const [vl, vc] = VERDICT[c.verdict] || ['판정 없음', ''];
@@ -600,32 +629,45 @@
         ev.map(e => h('div', { class: `ev${e.conflict ? ' conflict' : ''}` }, h('span', { class: 'lab', text: e.label }), h('span', { text: e.numeric || e.text })))));
   }
 
-  // ---- 회의록 카드
+  // ---- 회의록: 도우미가 짧게 알리고, 자세한 건 창으로 연다
   function resultCard(m) {
     const x = m.meta || {};
     const st = x.stats || {};
-    const card = h('div', { class: 'card result-card' },
-      h('div', { class: 'card-head' }, h('span', { class: 'title', text: '회의록' }),
-        h('a', { class: 'link sm', href: `/api/rooms/${encodeURIComponent(S.roomId)}/minutes.md`, download: '' }, '내보내기')),
-      h('div', { class: 'card-body' },
-        h('div', { text: x.summary || m.text }),
-        h('div', { class: 'stats' }, h('span', {}, '발언 ', h('b', { text: st.messages || 0 })), h('span', {}, '미니미 ', h('b', { text: st.mini || 0 })),
-          h('span', {}, '결정 ', h('b', { text: st.decisions || 0 })), h('span', {}, '시간 ', h('b', { text: `${st.minutes || 0}분` }))),
-        (x.issues || []).map((it, i) => {
-          const d = it.decision ? liveDecision(it.decision.id, it.decision) : null;
-          const s = d ? (DSTATUS[d.status] || ['', '']) : (it.status === 'untouched' ? ['미논의', 'plain'] : ['논의 중', 'info']);
-          return h('div', { class: 'minutes-issue' },
-            h('div', { class: 'h' }, h('span', { text: `${i + 1}. ${it.title}` }), tag(s[0], s[1])),
-            (it.opinions || []).length ? h('ul', {}, it.opinions.map(o => h('li', { class: `op c${colorOf(o.uid)}` }, h('b', { text: o.who }), o.position ? ` (${o.position})` : '', ` ${o.text}`))) : null,
-            (it.conflicts || []).map(c => h('div', { class: 'conf', text: `충돌 · ${c}` })),
-            d ? h('div', { class: 'note-line' }, h('b', { text: '결정 ' }), d.text,
-              d.status === 'pending' && (d.affected_names || []).length ? ` · ${d.affected_names.join(', ')} 확인 전` : '') : null);
-        }),
-        (x.questions || []).length ? h('div', { class: 'points' }, x.questions.map(q => h('div', { class: 'point' }, h('span', { class: 'k', text: `${q.who} 확인` }), h('span', { text: q.text })))) : null,
-        (x.next_steps || []).length ? h('div', { class: 'points' }, x.next_steps.map(s => h('div', { class: 'point' }, h('span', { class: 'k', text: '다음' }), h('span', { text: s })))) : null));
-    const row = cardRow('doc', card);
+    const row = botRow('result', [
+      h('p', { text: x.summary || m.text }),
+      h('div', { class: 'stats' }, h('span', {}, '발언 ', h('b', { text: st.messages || 0 })), h('span', {}, '미니미 ', h('b', { text: st.mini || 0 })),
+        h('span', {}, '결정 ', h('b', { text: st.decisions || 0 })), h('span', {}, h('b', { text: `${st.minutes || 0}분` }))),
+      h('div', { class: 'actions' },
+        h('button', { class: 'btn sm', type: 'button', on: { click: () => openMinutes(m.id) } }, icon('doc'), '회의록 보기'),
+        h('a', { class: 'btn sm ghost', href: `/api/rooms/${encodeURIComponent(S.roomId)}/minutes.md`, download: '' }, icon('download'), '내보내기')),
+    ], m.ts);
     row.dataset.kind = 'result';
     return row;
+  }
+  function openMinutes(id) {
+    const m = S.messages.find(x => x.id === id);
+    if (!m) return;
+    openModal({ eyebrow: '회의 도우미', title: '회의록', body: minutesBody(m), wide: true });
+    S.minutesOpen = id;
+  }
+  function minutesBody(m) {
+    const x = m.meta || {};
+    return h('div', { class: 'result-card' },
+      h('p', { class: 'lead-text', text: x.summary || m.text }),
+      (x.issues || []).map((it, i) => {
+        const d = it.decision ? liveDecision(it.decision.id, it.decision) : null;
+        const s = d ? (DSTATUS[d.status] || ['', '']) : (it.status === 'untouched' ? ['미논의', 'plain'] : ['논의 중', 'info']);
+        return h('div', { class: 'minutes-issue' },
+          h('div', { class: 'h' }, h('span', { text: `${i + 1}. ${it.title}` }), tag(s[0], s[1])),
+          (it.opinions || []).length ? h('ul', {}, it.opinions.map(o => h('li', { class: `op c${colorOf(o.uid)}` }, h('b', { text: o.who }), o.position ? ` (${o.position})` : '', ` ${o.text}`))) : null,
+          (it.conflicts || []).map(c => h('div', { class: 'conf', text: `충돌 · ${c}` })),
+          d ? h('div', { class: 'note-line' }, h('b', { text: '결정 ' }), d.text,
+            d.status === 'pending' && (d.affected_names || []).length ? ` · ${d.affected_names.join(', ')} 확인 전` : '') : null);
+      }),
+      (x.questions || []).length ? h('div', { class: 'points' }, x.questions.map(q => h('div', { class: 'point' }, h('span', { class: 'k', text: `${q.who} 확인` }), h('span', { text: q.text })))) : null,
+      (x.next_steps || []).length ? h('div', { class: 'points' }, x.next_steps.map(s2 => h('div', { class: 'point' }, h('span', { class: 'k', text: '다음' }), h('span', { text: s2 })))) : null,
+      h('div', { class: 'modal-actions' },
+        h('a', { class: 'btn', href: `/api/rooms/${encodeURIComponent(S.roomId)}/minutes.md`, download: '' }, icon('download'), '마크다운으로 내보내기')));
   }
 
   // ---- 입력 중
@@ -663,7 +705,7 @@
     }
     $$('[data-act="prep"],[data-act="digest"],[data-act="agenda"]').forEach(b => { b.hidden = S.observer; });
     $('#endBtn').hidden = S.observer;
-    $('#modeBtn').disabled = S.observer;
+    $$('#meMenu [data-mode]').forEach(b => { b.disabled = S.observer; });
   }
   function autosize() { const t = $('#input'); t.style.height = 'auto'; t.style.height = `${Math.min(160, t.scrollHeight)}px`; }
   function sendTyping(on) {
@@ -772,10 +814,10 @@
     $('#modal').hidden = false;
     dockDemo();
   }
-  function closeModal() { $('#modal').hidden = true; S.digest = null; dockDemo(); }
+  function closeModal() { $('#modal').hidden = true; S.digest = null; S.minutesOpen = null; dockDemo(); }
   function dockDemo() {
     // 오른쪽에 시트·모달이 열리면 시연 가이드는 왼쪽으로 비켜서 발표자가 언제든 다음 장면을 누를 수 있게 한다
-    const left = !$('#sheet').hidden || !$('#modal').hidden;
+    const left = !$('#sheet').hidden || !$('#modal').hidden || $('#rightPanel').classList.contains('open');
     $('#demoPanel').classList.toggle('dock-left', left);
     document.body.classList.toggle('demo-left', left && !$('#demoPanel').hidden);
   }
@@ -828,7 +870,7 @@
       panels().openPrep(uid, { tab: 1, preview: uid !== S.me });
     } else if (S.prep && S.prep.preview) closeSheet();
     if (!v.startsWith('digest:') && S.digest && S.digest.preview) closeModal();
-    if (['gate', 'evidence', 'drift', 'engine'].includes(d.focus)) setTab(d.focus, innerWidth > 1240);
+    if (['gate', 'evidence', 'drift', 'engine'].includes(d.focus)) { setTab(d.focus, true); if (S.observer) openRight(); }
     if (d.focus === 'agenda') { const el = $('#issueList'); el.classList.remove('focus-ring'); void el.offsetWidth; el.classList.add('focus-ring'); }
   }
   function flashMsg(id) {
@@ -881,8 +923,8 @@
 
   // ================================================================ 반응형 패널
   function openLeft() { $('#leftPanel').classList.add('open'); scrim(true); setNav('left'); }
-  function openRight() { if (innerWidth > 1240) return; $('#rightPanel').classList.add('open'); scrim(true); setNav('right'); }
-  function closePanels() { $('#leftPanel').classList.remove('open'); $('#rightPanel').classList.remove('open'); scrim(false); setNav('chat'); }
+  function openRight() { $('#rightPanel').classList.add('open'); scrim(true); setNav('right'); dockDemo(); }
+  function closePanels() { $('#leftPanel').classList.remove('open'); $('#rightPanel').classList.remove('open'); scrim(false); setNav('chat'); dockDemo(); }
   function scrim(on) { $('#scrim').hidden = !on; $('#scrim').classList.toggle('on', on); }
   function setNav(k) { $$('#bottomNav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.nav === k))); }
   function leave() {
@@ -890,7 +932,7 @@
     const url = new URL(location.href); url.searchParams.set('lobby', '1'); history.replaceState(null, '', url);
     showLobby(S.roomId);
   }
-  function closeMenus(except) { ['#meMenu', '#modeMenu'].forEach(id => { if (id !== except) $(id).hidden = true; }); }
+  function closeMenus(except) { ['#meMenu'].forEach(id => { if (id !== except) $(id).hidden = true; }); }
 
   // ================================================================ 정적 바인딩
   function bindStatic() {
@@ -938,8 +980,7 @@
       input.focus();
     }));
 
-    $('#modeBtn').addEventListener('click', e => { e.stopPropagation(); closeMenus('#modeMenu'); $('#modeMenu').hidden = !$('#modeMenu').hidden; });
-    $$('#modeMenu button').forEach(b => b.addEventListener('click', () => { $('#modeMenu').hidden = true; send({ type: 'mode', mode: b.dataset.mode }); }));
+    $$('#meMenu [data-mode]').forEach(b => b.addEventListener('click', () => { $('#meMenu').hidden = true; send({ type: 'mode', mode: b.dataset.mode }); }));
     $$('.tabs button').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
     const eng = $('#enginePill');
     eng.addEventListener('click', () => { setTab('engine', true); openRight(); });
@@ -980,14 +1021,14 @@
       closeMenus(); closePanels();
     });
     $('#openLeft').addEventListener('click', openLeft);
-    $('#openRight').addEventListener('click', () => { $('#rightPanel').classList.add('open'); scrim(true); });
+    $('#brainBtn').addEventListener('click', () => { if ($('#rightPanel').classList.contains('open')) closePanels(); else { renderDash(); openRight(); } });
     $('#closeRight').addEventListener('click', closePanels);
     $('#scrim').addEventListener('click', closePanels);
     $$('#bottomNav button').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.nav;
       closePanels();
       if (k === 'left') openLeft();
-      else if (k === 'right') { $('#rightPanel').classList.add('open'); scrim(true); setNav('right'); }
+      else if (k === 'right') { renderDash(); openRight(); }
       else if (k === 'prep') { if (S.observer) toast('발표 화면에는 내 미니미가 없어요.'); else panels().openPrep(S.me); }
     }));
 
@@ -1001,7 +1042,7 @@
       demoRun(S.demoSel, true);
     });
     $('#demoRestart').addEventListener('click', () => { S.demoSel = 0; demoRun(0); });
-    addEventListener('resize', () => { if (innerWidth > 1240) $('#rightPanel').classList.remove('open'); });
+    addEventListener('resize', () => { if (innerWidth > 900 && $('#leftPanel').classList.contains('open')) closePanels(); });
   }
 
   init();

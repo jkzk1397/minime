@@ -109,12 +109,9 @@
       <button class="icon-btn sm" data-act="agenda" title="안건 편집" aria-label="안건 편집"><svg class="ic"><use href="#i-edit"/></svg></button>
     </div>
     <div class="side-scroll">
-      <div class="side-label">쟁점</div>
-      <ol class="issue-list" id="issueList"></ol>
-      <div class="side-label">참석자 <span id="presenceCount"></span></div>
-      <ul class="member-list" id="memberList"></ul>
-      <div class="side-label">결정 <span id="decisionCount"></span></div>
-      <ul class="decision-list" id="decisionList"></ul>
+      <section class="side-sec"><h4 class="side-label">쟁점</h4><ol class="issue-list" id="issueList"></ol></section>
+      <section class="side-sec"><h4 class="side-label">멤버 <span id="presenceCount"></span></h4><ul class="member-list" id="memberList"></ul></section>
+      <section class="side-sec"><h4 class="side-label">결정 <span id="decisionCount"></span></h4><ul class="decision-list" id="decisionList"></ul></section>
     </div>
     <div class="me-bar" id="myCard"></div>
   </aside>
@@ -128,20 +125,17 @@
       </div>
       <div class="head-actions">
         <div class="avatar-stack" id="avatarStack"></div>
-        <div class="pop-wrap">
-          <button class="pill-btn" id="modeBtn" aria-haspopup="true"><svg class="ic"><use href="#i-mini"/></svg><span id="modeLabel">개입형</span><svg class="ic xs"><use href="#i-down"/></svg></button>
-          <div class="menu" id="modeMenu" hidden>
-            <button data-mode="intervene"><b>개입형</b><span>필요할 때만, 가장 관련 있는 미니미 1명</span></button>
-            <button data-mode="interactive"><b>상호작용형</b><span>관련 있는 미니미가 최대 2명까지</span></button>
-            <button data-mode="call"><b>호출형</b><span>@이름으로 부를 때만</span></button>
-          </div>
-        </div>
+        <button class="icon-btn" id="brainBtn" title="미니미의 머릿속" aria-label="미니미의 머릿속"><svg class="ic"><use href="#i-brain"/></svg></button>
         <button class="icon-btn" id="inviteBtn" title="팀원 초대" aria-label="팀원 초대"><svg class="ic"><use href="#i-qr"/></svg></button>
-        <button class="icon-btn" id="openRight" title="미니미의 머릿속" aria-label="미니미의 머릿속"><svg class="ic"><use href="#i-brain"/></svg></button>
         <button class="pill-btn" id="demoBtn" title="시연 가이드"><svg class="ic"><use href="#i-play"/></svg><span>시연</span></button>
         <div class="pop-wrap">
           <button class="icon-btn" id="meBtn" aria-haspopup="true" aria-label="더 보기"><svg class="ic"><use href="#i-more"/></svg></button>
           <div class="menu" id="meMenu" hidden>
+            <div class="menu-label">미니미 개입 방식</div>
+            <button class="menu-radio" data-mode="intervene" role="menuitemradio" aria-checked="true"><b>개입형</b><span>필요할 때만, 가장 관련 있는 미니미 1명</span></button>
+            <button class="menu-radio" data-mode="interactive" role="menuitemradio" aria-checked="false"><b>상호작용형</b><span>관련 있는 미니미가 최대 2명까지</span></button>
+            <button class="menu-radio" data-mode="call" role="menuitemradio" aria-checked="false"><b>호출형</b><span>@이름으로 부를 때만</span></button>
+            <hr>
             <button data-act="prep"><svg class="ic"><use href="#i-mini"/></svg>내 미니미 준비</button>
             <button data-act="digest"><svg class="ic"><use href="#i-clock"/></svg>내가 빠진 사이</button>
             <button data-act="agenda"><svg class="ic"><use href="#i-edit"/></svg>안건 편집</button>

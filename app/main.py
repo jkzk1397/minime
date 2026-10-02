@@ -19,17 +19,25 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, demo, interview, llm, minutes, orchestrator, persona, retrieval, seed
+from . import config, demo, interview, llm, minutes, nli, orchestrator, persona, retrieval, seed
 from .models import Stance, new_id
 from .store import ROOM_RE, UID_RE, add_persona, hub
 
 STATIC = Path(__file__).parent / "static"
 MAX_TEXT = 2000
-log = logging.getLogger("mymini")
+log = logging.getLogger("minime")
 
 
 # ---------------------------------------------------------------- 수명 주기
 _status_pending = False
+
+
+def _nli_warmup(loop: asyncio.AbstractEventLoop) -> None:
+    nli.warmup()
+    try:
+        loop.call_soon_threadsafe(_status_changed)   # 준비되면 엔진 탭의 검증기 표시를 갱신
+    except RuntimeError:
+        pass
 
 
 def _status_changed() -> None:
@@ -68,6 +76,7 @@ async def lifespan(app: FastAPI):
     llm._listeners.append(_status_changed)
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, retrieval.warmup)       # 형태소 분석기 첫 호출 지연을 미리
+    loop.run_in_executor(None, _nli_warmup, loop)           # 근거 검증 NLI 모델 (없으면 핵심어 검사로 대신)
     probe = asyncio.create_task(_probe_loop())
     if {"minsu", "jihyun", "haeun"} & set(hub.room("demo").personas):     # 예전 이름으로 저장된 시연 방
         hub.replace(seed.fresh_room("demo"))
@@ -78,7 +87,7 @@ async def lifespan(app: FastAPI):
     hub.save_all()
 
 
-app = FastAPI(title="MyMini", lifespan=lifespan)
+app = FastAPI(title="MINIME", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=config.ALLOW_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -109,7 +118,7 @@ def index():
 def health():
     st = llm.status()
     return {"ok": True, "fast": st["fast"], "slow": st["slow"], "embed": st["embed"], "order": st["order"],
-            "force_rule": st["force_rule"], "rooms": len(hub.rooms)}
+            "force_rule": st["force_rule"], "verifier": st["verifier"]["method"], "rooms": len(hub.rooms)}
 
 
 @app.get("/api/status")

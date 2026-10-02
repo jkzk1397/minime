@@ -1,4 +1,4 @@
-/* MyMini 클라이언트 (코어) — 로비 · 연결 · 회의방(사이드바·헤더·대화·입력) · 시연 가이드.
+/* MINIME 클라이언트 (코어) — 로비 · 연결 · 회의방(사이드바·헤더·대화·입력) · 시연 가이드.
    머릿속 패널·준비 시트·내가 빠진 사이·초대·안건 편집은 panels.js (window.MMPanels)에 있다.
    사용자 입력은 모두 textContent로만 넣는다(XSS 방지). */
 'use strict';
@@ -81,6 +81,7 @@
   const RSTATE = { confirmed: ['확인된 입장', 'ok'], report: ['보고서 근거', 'info'], candidate: ['초안만', 'warn'], none: ['근거 없음', 'bad'] };
   const MODE_KO = { intervene: '개입형', interactive: '상호작용형', call: '호출형' };
 
+  const VERIFIER_KO = { nli: 'NLI', lexical: '핵심어', off: '끔' };
   function engineLabel(e) {
     if (!e || e === 'rule') return '규칙';
     const [kind, ...rest] = e.split(':');
@@ -119,12 +120,12 @@
 
   // ================================================================ 시작
   function init() {
-    const theme = store.get('mymini.theme');
+    const theme = store.get('minime.theme');
     document.documentElement.dataset.theme = theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     bindStatic();
     const qs = new URLSearchParams(location.search);
     const roomQ = qs.get('room');
-    const sess = store.get('mymini.session');
+    const sess = store.get('minime.session');
     if (sess && (!roomQ || roomQ === sess.room) && !qs.has('lobby')) join(sess.room, sess.uid, sess.observer);
     else showLobby(roomQ || (sess && sess.room) || 'demo');
   }
@@ -135,7 +136,7 @@
     $('#app').hidden = true;
     $('#demoPanel').hidden = true;
     $('#lobby').hidden = false;
-    document.title = 'MyMini';
+    document.title = 'MINIME';
     if (roomId) { $('#roomInput').value = roomId; loadLobbyRoom(roomId); }
   }
 
@@ -176,7 +177,7 @@
   function join(roomId, uid, observer) {
     S.roomId = roomId; S.me = observer ? null : uid; S.observer = !!observer;
     S.messages = []; S.msgEls.clear(); S.gateByMsg.clear(); S.gate = null; S.selGate = null; S.drift = [];
-    store.set('mymini.session', { room: roomId, uid, observer: !!observer });
+    store.set('minime.session', { room: roomId, uid, observer: !!observer });
     const url = new URL(location.href);
     url.searchParams.set('room', roomId); url.searchParams.delete('lobby');
     history.replaceState(null, '', url);
@@ -207,7 +208,7 @@
     ws.onclose = ev => {
       clearInterval(S.pingT);
       if (S.ws !== ws || S.closedByUser) return;
-      if (ev.code === 4404) { store.del('mymini.session'); toast('방에 없는 팀원이거나 방이 바뀌었어요. 자리를 다시 골라 주세요.', 'bad'); showLobby(S.roomId); return; }
+      if (ev.code === 4404) { store.del('minime.session'); toast('방에 없는 팀원이거나 방이 바뀌었어요. 자리를 다시 골라 주세요.', 'bad'); showLobby(S.roomId); return; }
       $('#connBanner').hidden = false;
       const wait = Math.min(8000, 600 * 2 ** S.retry++);
       setTimeout(() => { if (S.ws === ws) connect(); }, wait);
@@ -279,7 +280,7 @@
   function renderRoom() {
     const r = S.room;
     if (!r) return;
-    document.title = `${r.title || r.room_id} · MyMini`;
+    document.title = `${r.title || r.room_id} · MINIME`;
     $('#roomMark').textContent = (r.title || r.room_id || 'M').trim().slice(0, 1);
     $('#roomTitle').textContent = r.title || r.room_id;
     $('#agendaTitle').textContent = r.agenda || '안건을 정해 주세요';
@@ -386,7 +387,7 @@
     const feed = $('#feed');
     S.msgEls.clear();
     if (!S.messages.length) {
-      fill(feed, h('div', { class: 'feed-empty' }, h('span', { class: 'mark' }),
+      fill(feed, h('div', { class: 'feed-empty' }, h('img', { class: 'brand-icon', src: '/static/brand/apple-touch-icon.png', alt: '' }),
         h('h3', { text: '회의를 시작해 보세요' }),
         h('p', { text: '첫 메시지를 보내면 회의가 시작돼요. 자리를 비운 팀원의 미니미는 근거가 있을 때만 말해요.' })));
       return;
@@ -486,7 +487,9 @@
     renderCited(bubble, m.text, meta.citations || []);
     whyBubble(bubble, meta);
     const label = abst ? (abst === 'commit' ? '약속 보류' : '확인 필요') : (ACT[meta.act] || '');
-    bubble.title = [`왜 이렇게 말했는지 보기 · ${engineLabel(meta.engine)}`, meta.dropped ? `출처 없는 문장 ${meta.dropped}개 삭제` : ''].filter(Boolean).join(' · ');
+    const vf = meta.verify;
+    const vtxt = vf && (vf.passed || vf.dropped) ? `근거 검증(${VERIFIER_KO[vf.method] || vf.method}) ${vf.passed}문장 통과${vf.dropped ? ` · ${vf.dropped}문장 삭제` : ''}` : (meta.dropped ? `근거 없는 문장 ${meta.dropped}개 삭제` : '');
+    bubble.title = [`왜 이렇게 말했는지 보기 · ${engineLabel(meta.engine)}`, vtxt].filter(Boolean).join(' · ');
     return h('div', { class: `row mini other c${mem.color || 0} ${cont ? 'cont' : 'first'}${!cont && chained(m, prev) ? ' chain' : ''}${abst ? ' abstain' : ''}` },
       miniAvatar(mem),
       h('div', { class: 'col' },
@@ -943,7 +946,7 @@
   function scrim(on) { $('#scrim').hidden = !on; $('#scrim').classList.toggle('on', on); }
   function setNav(k) { $$('#bottomNav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.nav === k))); }
   function leave() {
-    store.del('mymini.session');
+    store.del('minime.session');
     const url = new URL(location.href); url.searchParams.set('lobby', '1'); history.replaceState(null, '', url);
     showLobby(S.roomId);
   }
@@ -1011,7 +1014,7 @@
     });
     $('#themeBtn').addEventListener('click', () => {
       const cur = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-      document.documentElement.dataset.theme = cur; store.set('mymini.theme', cur); $('#meMenu').hidden = true;
+      document.documentElement.dataset.theme = cur; store.set('minime.theme', cur); $('#meMenu').hidden = true;
     });
     $('#meBtn').addEventListener('click', e => { e.stopPropagation(); closeMenus('#meMenu'); $('#meMenu').hidden = !$('#meMenu').hidden; });
     document.addEventListener('click', e => {

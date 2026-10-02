@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-REM MyMini 실행 (Windows). 가상환경이 없거나 망가졌으면 새로 만들고 패키지를 설치한다.
+REM MINIME 실행 (Windows). 가상환경이 없거나 망가졌으면 새로 만들고 패키지를 설치한다.
 cd /d %~dp0
 set "PY=.venv\Scripts\python.exe"
 
@@ -30,7 +30,7 @@ if not exist .venv\.installed (
 if not exist .env copy .env.example .env >nul
 if "%PORT%"=="" set PORT=8000
 echo.
-echo   MyMini를 띄웁니다 - http://localhost:%PORT%
+echo   MINIME를 띄웁니다 - http://localhost:%PORT%
 echo   팀원 접속 주소(같은 와이파이)는 아래 로그의 '팀원 접속 주소'를 보세요.
 echo   Windows 방화벽 허용 창이 뜨면 [허용]을 누르세요.
 echo.

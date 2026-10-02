@@ -1,4 +1,6 @@
-# MyMini — 빠진 사람의 미니미가 대신 회의에 들어가요
+<p><img src="app/static/brand/logo.png" alt="MINIME" height="64"></p>
+
+# MINIME — 빠진 사람의 미니미가 대신 회의에 들어가요
 
 리더도 진행 방식도 없는 학생·사회초년생 팀을 위한 **AI 회의 보조자**입니다.
 팀원의 보고서와 3분 입장 인터뷰로 만든 **'근거 있는 분신(미니미)'** 이
@@ -78,6 +80,20 @@ LLM_ORDER=api
 API_KEY=sk-...                      # OpenAI. Groq·Gemini·OpenRouter 예시는 .env.example 참고
 ```
 
+### 근거 검증 (NLI, 선택)
+
+미니미가 쓴 문장마다 **사실 부분(core)을 인용한 보고서 문단이 함의하는지**를 별도의 NLI 모델(mDeBERTa-v3 XNLI)로 판정해, 함의 확률 0.5 이상인 문장만 게시합니다. 발언을 만드는 모델과 검사하는 모델이 달라 스스로를 채점하지 않습니다.
+
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements-ml.txt        # 첫 실행 때 모델(약 0.6GB)을 한 번 내려받음
+```
+
+- 말투(text)와 사실(core)을 나눠 core만 검증하고, text가 core에 없는 숫자·영문 단어를 덧붙이거나 지나치게 길면 코드 가드가 막습니다.
+- 긴 문단은 문장 단위로, 여러 문단을 인용한 문장은 합친 전제로도 잽니다.
+- 설치하지 않았거나 모델을 불러오는 중이면 핵심어 검사로 자동 대체합니다 (`VERIFY_MODE=auto`). 엔진 탭의 **근거 검증** 칸에서 지금 쓰는 방식을 볼 수 있습니다.
+- 한계: NLI는 "보고서와 일치하는가"만 보고 보고서 내용 자체가 맞는지는 보지 않습니다. 표현을 많이 바꾼 문장은 뜻이 같아도 '중립'으로 떨어질 수 있습니다.
+
 - 상태 확인: `http://localhost:8000/health`, 회의방 위쪽 패널 아이콘 → **미니미의 머릿속 › 엔진** 탭 (레인별 엔진·지연 p50/p95·호출 추적·서킷 브레이커)
 - 시연용 **모델 끄기** 스위치: 엔진 탭 또는 시연 6장면
 - 레인별 시간 제한(`FAST_TIMEOUT`·`SLOW_TIMEOUT`), 형식 오류 1회 재시도, 연속 3번 실패하면 45초 동안 그 엔진을 건너뜀(서킷 브레이커)
@@ -108,7 +124,7 @@ API_KEY=sk-...                      # OpenAI. Groq·Gemini·OpenRouter 예시는
 
 **LLM + Memory + Persona + RAG + Prompt Context + Feedback → 개인화된 에이전트.** 모델 가중치는 건드리지 않습니다.
 
-| 구성 | MyMini에서 | 코드 |
+| 구성 | MINIME에서 | 코드 |
 | --- | --- | --- |
 | Base LLM | 빠른 레인 `qwen3.5:4b`(판단) + 생각 레인 `qwen3.5:9b`(작성·검증) → API → 규칙 대체 | `app/llm.py` |
 | Personal Memory | 보고서 문단, 지난 회의 발언, 회의 중 본인 발언, 복귀 후 답한 질문, 회의 후 '추정' 기억 | `app/models.py`, `persona.infer_memory` |
@@ -119,7 +135,7 @@ API_KEY=sk-...                      # OpenAI. Groq·Gemini·OpenRouter 예시는
 
 | 모듈 | 역할 | 파일 |
 | --- | --- | --- |
-| M1 근거 페르소나 | 입장 카드·하이브리드 검색·출처 강제·생성 후 출처 검사·침묵 | `persona.py`, `retrieval.py`, `interview.py` |
+| M1 근거 페르소나 | 입장 카드·하이브리드 검색·출처 강제·생성 후 NLI 근거 검증(+코드 가드)·침묵 | `persona.py`, `nli.py`, `retrieval.py`, `interview.py` |
 | M2 개입 게이트 | 규칙 필터 → 효용 U = 관련도 × 근거 × 새로움 × 입장 차이 − 비용 → 애매할 때만 작은 모델 | `gate.py` |
 | M3 2차 검증 | 원자 주장 → Toulmin → 검증 질문 → 내 자료·이전 발언·팀원 자료 대조 → 수치 대조 → 판정 카드 | `verify.py` |
 | M4 안건 이탈 | 쟁점 어휘 거리(LLM 없이 수 ms) → K턴 연속이면 (모델 확인 후) 상기 | `agenda.py` |

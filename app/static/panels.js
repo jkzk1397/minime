@@ -1,4 +1,4 @@
-/* MyMini 패널 — 미니미의 머릿속 · 내 미니미 준비 · 내가 빠진 사이 · 팀원 초대 · 안건 편집.
+/* MINIME 패널 — 미니미의 머릿속 · 내 미니미 준비 · 내가 빠진 사이 · 팀원 초대 · 안건 편집.
    app.js보다 먼저 로드되고, app.js가 시작할 때 window.MMPanels(ctx)를 한 번 부른다.
    사용자 입력은 모두 textContent로만 넣는다 (초대 QR SVG만 서버가 만든 것을 그대로 넣는다). */
 'use strict';
@@ -280,7 +280,14 @@ window.MMPanels = function (ctx) {
     });
 
     const tr = st.trace || [];
-    fill(box, sw, laneEls, embedEl,
+    const vf = st.verifier || {};
+    const vfLabel = vf.method === 'nli' ? 'NLI · mDeBERTa' : vf.method === 'off' ? '끔' : vf.nli === 'loading' ? '핵심어 (NLI 준비 중)' : '핵심어';
+    const verifierEl = h('div', { class: 'lane' },
+      h('div', { class: 'lane-head' }, h('span', { text: '근거 검증' }), tag(vfLabel, vf.method === 'nli' ? 'ok' : '')),
+      h('div', { class: 'muted sm', text: vf.method === 'nli'
+        ? `미니미 문장의 사실 부분을 인용 문단이 함의하는지 따로 판정해요. 함의 확률 ${vf.threshold ?? 0.5} 미만이면 지워요.`
+        : '인용 문단과 핵심어가 겹치는지로 검사해요. NLI 모델을 설치하면 더 엄격해져요 (requirements-ml.txt).' }));
+    fill(box, sw, laneEls, embedEl, verifierEl,
       h('div', { class: 'section-title', text: `연결 순서 · ${order.join(' → ')}` }),
       engines,
       tr.length ? h('details', { class: 'tip' }, h('summary', { text: `최근 호출 ${tr.length}건` }),

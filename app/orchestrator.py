@@ -19,7 +19,7 @@ from .models import Message, Room, Stance, new_id
 from .store import hub
 
 MINI_DELAY = 0.7       # 미니미가 바로 튀어나오지 않도록 짧은 '생각' 시간 (규칙 모드에서도 자연스럽게)
-log = logging.getLogger("mymini")
+log = logging.getLogger("minime")
 _ending: set[str] = set()   # 회의록을 만드는 중인 방 (종료는 한 번만)
 
 
@@ -327,11 +327,12 @@ async def _run_mini(room_id: str, act: dict, trigger: Message, issue_id: str, hi
                 q = persona.save_question(p, trigger, "no_evidence", issue_id)
                 text = persona.abstain_text(p, "no_evidence")
                 meta = {"abstain": "no_evidence", "question_id": q.id, "reply_to": trigger.id, "engine": out["engine"],
-                        "dropped": out["dropped"]}
+                        "dropped": out["dropped"], "verify": out.get("verify")}
             else:
                 text = out["text"]
                 meta = {"act": act["act"], "citations": out["citations"], "sentences": out["sentences"],
-                        "engine": out["engine"], "dropped": out["dropped"], "reply_to": trigger.id}
+                        "engine": out["engine"], "dropped": out["dropped"], "verify": out.get("verify"),
+                        "reply_to": trigger.id}
         if stale():
             return
         if act.get("called"):

@@ -10,7 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="mymini-test-"))
+os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="minime-test-"))
 os.environ["LLM_ORDER"] = os.environ.get("TEST_LLM_ORDER", "rule")
 os.environ["COOLDOWN_SEC"] = "0"
 

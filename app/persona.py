@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import time
 
-from . import config, ko, llm
+from . import config, ko, llm, nli
 from .agenda import detect_issue, detect_position, issue_query, stance_position
 from .models import Issue, Message, Persona, Report, ReturnQuestion, Room, Stance, new_id
 from .retrieval import Chunk, Hit, Index, lexical_support, text_similarity, tokens
@@ -255,8 +255,9 @@ def add_report(room: Room, p: Persona, title: str, text: str) -> Report:
 _SPEAK_SCHEMA = {
     "type": "object", "required": ["sentences"],
     "properties": {"sentences": {"type": "array", "items": {
-        "type": "object", "required": ["text", "cites"],
-        "properties": {"text": {"type": "string"}, "cites": {"type": "array", "items": {"type": "string"}}}}}},
+        "type": "object", "required": ["text", "cites"],          # core가 빠지면 text 전체를 검증 (더 엄격)
+        "properties": {"text": {"type": "string"}, "core": {"type": "string"},
+                       "cites": {"type": "array", "items": {"type": "string"}}}}}},
 }
 _OPENER = {"rebuttal": "저는 생각이 조금 달라요.", "agree_add": "저도 같은 방향이에요.", "opinion": "", "answer": ""}
 
@@ -319,6 +320,7 @@ async def compose(room: Room, uid: str, trigger: Message, act: str, issue_id: st
     sents: list[dict] = []
     engine = llm.RULE
     dropped = 0
+    checks: list[dict] = []
     if pool:
         sys_p, user_p, _ = llm.prompt(
             "speak", name=p.name, scope=_scope_text(p), criteria=_criteria_text(p),
@@ -329,13 +331,14 @@ async def compose(room: Room, uid: str, trigger: Message, act: str, issue_id: st
         data, engine = await llm.call_json("speak", "slow", sys_p, user_p, _SPEAK_SCHEMA, temperature=0.4,
                                            max_tokens=420)
         if data is not None:
-            sents, dropped = check_citations(data.get("sentences", []), pool)
+            sents, dropped, checks = await check_citations(data.get("sentences", []), pool)
         if not sents:
             engine = llm.RULE
     if not sents:
         sents = _rule_sentences(p, act, trigger.text, stance, labels, hits, pool)
     if not sents:
-        return {"text": "", "sentences": [], "citations": [], "engine": engine, "dropped": dropped}
+        return {"text": "", "sentences": [], "citations": [], "engine": engine, "dropped": dropped,
+                "verify": _verify_meta(checks)}
     opener = _OPENER.get(act, "")
     prev = room.messages[-1] if room.messages else None
     if (prev and prev.kind == "mini" and prev.user_id != uid and (prev.meta or {}).get("reply_to") == trigger.id
@@ -348,23 +351,42 @@ async def compose(room: Room, uid: str, trigger: Message, act: str, issue_id: st
             if lab in pool and lab not in [u["label"] for u in used]:
                 c = pool[lab]
                 used.append({"label": lab, "kind": c.kind, "text": c.text, "chunk_id": c.id})
-    return {"text": text.strip(), "sentences": sents, "citations": used, "engine": engine, "dropped": dropped}
+    return {"text": text.strip(), "sentences": sents, "citations": used, "engine": engine, "dropped": dropped,
+            "verify": _verify_meta(checks)}
 
 
-def check_citations(raw: list[dict], pool: dict[str, Chunk]) -> tuple[list[dict], int]:
-    """생성 후 검사: 출처가 없거나, 인용 문단이 문장을 뒷받침하지 않으면 그 문장을 지운다."""
-    kept, dropped = [], 0
+async def check_citations(raw: list[dict], pool: dict[str, Chunk]) -> tuple[list[dict], int, list[dict]]:
+    """생성 후 검사: 출처가 없거나, 코드 가드에 걸리거나, 인용 문단이 사실 부분(core)을 함의하지 않으면 지운다.
+
+    text = 회의에서 보여 줄 말투 있는 문장, core = 그 문장에서 자료로 확인되는 사실만.
+    말투("걱정되네요") 때문에 검증이 실패하지 않게 core만 NLI로 검사하고, text가 core를 넘지 못하게 가드로 막는다.
+    """
+    kept, dropped, checks = [], 0, []
     for s in raw:
         text = strip_cites(str(s.get("text", ""))).strip()
+        core = strip_cites(str(s.get("core") or "")).strip() or text
         cites = [c.strip("[] ") for c in s.get("cites", []) if c.strip("[] ") in pool]
         if not text:
             continue
-        support = max((lexical_support(text, pool[c].text) for c in cites), default=0.0)
-        if not cites or support < config.SUPPORT_MIN:
+        if not cites:
+            dropped += 1
+            checks.append({"text": text, "ok": False, "method": "cite", "score": 0.0, "reason": "출처 없음"})
+            continue
+        r = await nli.check(text, core, [pool[c].text for c in cites])
+        checks.append({"text": text, "core": core, **r})
+        if not r["ok"]:
             dropped += 1
             continue
-        kept.append({"text": text, "cites": cites, "support": round(support, 2)})
-    return kept, dropped
+        kept.append({"text": text, "core": core, "cites": cites, "support": r["score"], "verifier": r["method"]})
+    return kept, dropped, checks
+
+
+def _verify_meta(checks: list[dict]) -> dict:
+    """화면 'AI 활동 기록'·말풍선 툴팁용 요약: 어떤 검증기로 몇 문장이 통과·탈락했나."""
+    methods = [c["method"] for c in checks if c["method"] in ("nli", "lexical", "off")]
+    return {"method": methods[0] if methods else nli.method(),
+            "passed": sum(1 for c in checks if c["ok"]), "dropped": sum(1 for c in checks if not c["ok"]),
+            "checks": checks[:6]}
 
 
 def _with_tag(s: dict) -> str:

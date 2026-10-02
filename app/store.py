@@ -13,7 +13,7 @@ from fastapi import WebSocket
 from . import config
 from .models import Message, Persona, Room
 
-log = logging.getLogger("mymini")
+log = logging.getLogger("minime")
 ROOM_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 UID_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 

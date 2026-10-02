@@ -1,4 +1,4 @@
-/* MyMini — 회의 채팅 (v4: 첫 시안의 깔끔한 채팅).
+/* MINIME — 회의 채팅 (v4: 첫 시안의 깔끔한 채팅).
    레이아웃: 왼쪽 패널 + 대화 2단. '미니미의 머릿속'은 모든 폭에서 오른쪽 서랍.
    색은 '사람'에게만: 사람 말 = 흰 말풍선 + 그 사람 색 테두리, 미니미 = 옅은 바탕 + 주인 색 점선. 근거는 밑줄. */
 :root{
@@ -117,6 +117,10 @@ select{width:auto;padding:6px 8px;font-size:13px}
 /* ---------------------------------------------------------------- 로비 */
 .lobby{min-height:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,460px);gap:56px;align-items:center;max-width:1080px;margin:0 auto;padding:48px 24px}
 .wordmark{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.02em;margin-bottom:36px}
+.wordmark img{height:40px;width:auto;display:block}
+.wordmark .logo-dark,:root[data-theme="dark"] .wordmark .logo-light{display:none}
+:root[data-theme="dark"] .wordmark .logo-dark{display:block}
+.brand-icon{width:56px;height:56px;display:block;border-radius:50%;box-shadow:0 6px 18px rgba(15,107,255,.25)}
 .mark{width:28px;height:28px;border-radius:10px;background:var(--accent);position:relative;flex:none}
 .mark::before{content:"";position:absolute;inset:6px;border-radius:7px;border:1.6px dashed var(--on-accent)}
 .mark::after{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:var(--on-accent);left:11px;top:11px}
@@ -664,6 +668,7 @@ details.more{margin-top:8px;padding-top:6px;border-top:1px dashed var(--line-2)}
   .lobby{grid-template-columns:1fr;gap:28px;padding:28px 16px}
   .seat-grid,.grid2,.tip .cols{grid-template-columns:1fr}
   .wordmark{margin-bottom:20px}
+  .wordmark img{height:32px}
   .sheet-card{border-radius:0}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

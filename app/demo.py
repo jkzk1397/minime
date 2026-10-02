@@ -112,7 +112,7 @@ SCENES = [
     },
 ]
 
-log = logging.getLogger("mymini")
+log = logging.getLogger("minime")
 _state: dict[str, dict] = {}
 _tasks: dict[str, asyncio.Task] = {}
 

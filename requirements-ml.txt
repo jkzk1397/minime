@@ -1,0 +1,7 @@
+# 근거 검증 NLI 모델 (선택). 없으면 핵심어 검사로 자동 대체된다.
+# 1) CPU용 torch 먼저:  pip install torch --index-url https://download.pytorch.org/whl/cpu
+# 2) 그다음:            pip install -r requirements-ml.txt
+# 첫 실행 때 Hugging Face에서 모델(약 0.6GB)을 한 번 내려받는다. 시연 전에 미리 한 번 띄워 두기.
+transformers>=4.44
+sentencepiece>=0.2
+protobuf>=4.25

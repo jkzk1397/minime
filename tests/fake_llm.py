@@ -40,7 +40,7 @@ def _answer(system: str, user: str, schema: dict) -> dict:
         if labels:
             lab, text = labels[0]
             first = re.split(r"(?<=[.!?])\s", text)[0]
-            return {"sentences": [{"text": first, "cites": [lab]},
+            return {"sentences": [{"text": first, "core": first, "cites": [lab]},
                                   {"text": "화성 이주 우주선 예산도 이미 확보했어요", "cites": [lab]}]}
     if "개입 판단기" in system:
         m = re.search(r"^- (\w+) \(", user, flags=re.M)

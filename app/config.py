@@ -70,7 +70,12 @@ TYPING_WAIT_SEC = _f("TYPING_WAIT_SEC", 2.5)  # 사람이 입력 중이면 이�
 
 # ---------------------------------------------------------------- 근거 (M1)
 EVIDENCE_MIN = _f("EVIDENCE_MIN", 0.35)       # 이 점수 아래면 말하지 않는다 (eval/eval.py --sweep 으로 정함)
-SUPPORT_MIN = _f("SUPPORT_MIN", 0.18)         # 생성 문장과 인용 문단의 최소 일치도 (출처 검사)
+SUPPORT_MIN = _f("SUPPORT_MIN", 0.18)         # 핵심어 검사(NLI를 못 쓸 때)의 최소 일치도
+# 근거 검증: 미니미 문장의 사실 부분(core)을 인용 문단이 함의하는지 NLI 모델로 판정 (app/nli.py)
+VERIFY_MODE = os.getenv("VERIFY_MODE", "auto").lower()   # auto | nli | lexical | off
+VERIFY_THRESHOLD = _f("VERIFY_THRESHOLD", 0.5)           # 함의 확률이 이 아래면 그 문장을 지운다
+NLI_MODEL = os.getenv("NLI_MODEL", "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7")
+TONE_SLACK = int(_f("TONE_SLACK", 25))                   # 말투 문장(text)이 사실 부분(core)보다 길어도 되는 글자 수
 RETRIEVAL_METHOD = os.getenv("RETRIEVAL_METHOD", "hybrid").lower()   # hybrid | bm25 | vector (eval로 비교해 고른다)
 
 # ---------------------------------------------------------------- 안건 이탈 (M4)

@@ -389,6 +389,11 @@ def active_label(lane: str) -> str:
     return RULE
 
 
+def _verifier_status() -> dict:
+    from . import nli          # 늦은 import: nli → retrieval → llm 순환을 피한다
+    return nli.status()
+
+
 def status() -> dict:
     engines = []
     for name in order():
@@ -405,4 +410,5 @@ def status() -> dict:
         "fast": active_label("fast"), "slow": active_label("slow"),
         "embed": config.EMBED_MODEL if embed_available() else "n-gram(내장)",
         "gate_mode": config.GATE_MODE, "engines": engines, "trace": list(_trace)[-25:],
+        "verifier": _verifier_status(),
     }

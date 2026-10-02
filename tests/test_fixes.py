@@ -177,7 +177,7 @@ async def _pipeline_error(monkeypatch):
 
 
 def test_pipeline_error_is_logged_and_noticed(monkeypatch, caplog):
-    with caplog.at_level(logging.ERROR, logger="mymini"):
+    with caplog.at_level(logging.ERROR, logger="minime"):
         asyncio.run(_pipeline_error(monkeypatch))
     assert any("pipeline failed" in r.getMessage() for r in caplog.records)
 

@@ -1,4 +1,4 @@
-"""MyMini 평가: 지표 6개 + 비교 실험을 한 번에.
+"""MINIME 평가: 지표 6개 + 비교 실험을 한 번에.
 
     python eval/eval.py                # 지금 설정(.env)의 엔진으로
     LLM_ORDER=rule python eval/eval.py # 규칙만 (기준선 A)
@@ -22,7 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="mymini-eval-"))
+os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="minime-eval-"))
 os.environ.setdefault("COOLDOWN_SEC", "0")
 
 from app import agenda, config, gate, interview, ko, llm, persona, seed, verify  # noqa: E402
@@ -289,7 +289,7 @@ async def main() -> None:
                        "verify_p50": p(ver["verify_ms"], .5), "verify_p95": p(ver["verify_ms"], .95)},
         "elapsed_s": round(time.time() - t_start, 1),
     }
-    md = [f"# MyMini 평가 결과", "", f"- 엔진: 빠른 레인 `{engine['fast']}` · 생각 레인 `{engine['slow']}` · 임베딩 `{engine['embed']}`",
+    md = [f"# MINIME 평가 결과", "", f"- 엔진: 빠른 레인 `{engine['fast']}` · 생각 레인 `{engine['slow']}` · 임베딩 `{engine['embed']}`",
           f"- 데이터: 질문 {len(qs)}(보고서 안 {sum(q['answerable'] for q in qs)} / 밖 {sum(not q['answerable'] for q in qs)}) · 개입 라벨 {len(labels)} · 심은 주장 {len(claims)}",
           f"- 침묵 임계값 EVIDENCE_MIN = {config.EVIDENCE_MIN}", "",
           "| 지표 | 값 | 목표(기획서) |", "| --- | --- | --- |",

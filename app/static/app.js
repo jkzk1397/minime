@@ -439,26 +439,27 @@
     const mine = m.user_id === S.me;
     const meta = m.meta || {};
     const cont = grouped(m, prev);
-    const stamp = h('span', { class: 'stamp' },
-      meta.decision_id ? h('span', { title: '결정으로 기록됨' }, icon('flag')) : null,
-      meta.refined ? h('span', { title: '미니미가 다듬은 문장' }, icon('wand')) : null,
-      fmtTime(m.ts));
     const canAct = !S.observer && S.me && !(me() && me().mini_on);
     const acts = canAct ? h('div', { class: 'hover-actions' },
       h('button', { type: 'button', title: '내 미니미가 근거 · 이전 발언 · 놓친 점을 확인해요', on: { click: () => { send({ type: 'verify', message_id: m.id }); toast('미니미에게 2차 검증을 맡겼어요.'); } } }, icon('shield'), '2차 검증'),
       !meta.decision_id ? h('button', { type: 'button', title: '이 발언을 결정으로 기록해요', on: { click: () => send({ type: 'mark_decision', message_id: m.id }) } }, icon('flag'), '결정으로 기록') : null) : null;
     return h('div', { class: `row human ${mine ? 'mine' : 'other'} c${colorOf(m.user_id)} ${cont ? 'cont' : 'first'}` },
-      mine ? null : avatar(S.byId[m.user_id] || { name: nameOf(m.user_id) }),
+      avatar(S.byId[m.user_id] || { name: nameOf(m.user_id) }),
       h('div', { class: 'col' },
-        !mine && !cont ? h('div', { class: 'who', text: nameOf(m.user_id) }) : null,
-        h('div', { class: 'line' }, h('div', { class: 'bubble', text: m.text }), stamp)),
+        cont ? null : whoLine(nameOf(m.user_id), [
+          meta.refined ? chipTag('다듬음', '미니미가 다듬어 준 문장') : null,
+          meta.decision_id ? chipTag('결정', '결정으로 기록된 발언') : null], m.ts),
+        h('div', { class: 'bubble', text: m.text })),
       acts);
   }
   // 다른 주인의 미니미가 바로 이어 말하면 한 줄기 대화로 잇는다
   const isMiniLike = m => !!m && (m.kind === 'mini' || m.kind === 'verify');
   const ownerOf = m => (m.kind === 'verify' ? (m.meta || {}).requester : m.user_id);
   const chained = (m, prev) => isMiniLike(prev) && ownerOf(prev) !== ownerOf(m) && m.ts - prev.ts < 180;
-  const miniHead = (mem, label) => h('div', { class: 'who' }, `${mem.name}의 미니미`, h('span', { class: 'ai', text: label ? `AI · ${label}` : 'AI' }));
+  const chipTag = (text, title) => h('span', { class: 'chip-tag', text, title: title || '' });
+  const whoLine = (name, tags, ts) => h('div', { class: 'who' }, h('b', { text: name }), tags, ts ? h('time', { text: fmtTime(ts) }) : null);
+  const miniHead = (mem, label, ts) => whoLine(`${mem.name} 미니미`, [label ? chipTag(label) : null], ts);
+  const miniAvatar = mem => h('span', { class: `av mini c${mem.color || 0}`, 'aria-hidden': 'true', title: `${mem.name} 미니미` }, 'AI');
 
   // 미니미 말풍선을 누르면 왜 말했는지(개입 판단 · 근거)를 서랍으로 연다
   function whyBubble(bubble, meta) {
@@ -466,7 +467,7 @@
     bubble.tabIndex = 0;
     bubble.title = '왜 이렇게 말했는지 보기';
     const open = e => {
-      if (e.target.closest('.cite, a, summary, details, button')) return;
+      if (e.target.closest('.src, a, summary, details, button')) return;
       if (meta.reply_to && S.gateByMsg.has(meta.reply_to)) showGateFor(meta.reply_to);
       else { openRight(); setTab('evidence', true); }
     };
@@ -483,33 +484,45 @@
     renderCited(bubble, m.text, meta.citations || []);
     whyBubble(bubble, meta);
     const label = abst ? (abst === 'commit' ? '약속 보류' : '확인 필요') : (ACT[meta.act] || '');
-    const stampTitle = [engineLabel(meta.engine), meta.dropped ? `출처 없는 문장 ${meta.dropped}개 삭제` : ''].filter(Boolean).join(' · ');
+    bubble.title = [`왜 이렇게 말했는지 보기 · ${engineLabel(meta.engine)}`, meta.dropped ? `출처 없는 문장 ${meta.dropped}개 삭제` : ''].filter(Boolean).join(' · ');
     return h('div', { class: `row mini other c${mem.color || 0} ${cont ? 'cont' : 'first'}${!cont && chained(m, prev) ? ' chain' : ''}${abst ? ' abstain' : ''}` },
-      avatar(mem, { mini: true }),
+      miniAvatar(mem),
       h('div', { class: 'col' },
-        cont ? null : miniHead(mem, label),
-        h('div', { class: 'line' }, bubble, h('span', { class: 'stamp', title: stampTitle, text: fmtTime(m.ts) }))));
+        cont ? null : miniHead(mem, label, m.ts),
+        bubble));
   }
   function renderCited(el, text, citations) {
+    // 문장 뒤 [보고서 3] 같은 꼬리표는 지우고, 그 문장에 은은한 밑줄을 그어 누르면 원문이 보이게 한다
     const byLabel = Object.fromEntries((citations || []).map(c => [c.label, c]));
-    const re = /\[([^\]\n]{1,30})\]/g;
-    let last = 0; let mm;
+    const re = /\s*\[([^\]\n]{1,30})\]/g;
+    let last = 0; let mm; let prevSrc = null;
     while ((mm = re.exec(text))) {
-      if (mm.index > last) el.append(document.createTextNode(text.slice(last, mm.index)));
       const c = byLabel[mm[1]];
+      if (!c) continue;                                              // 모르는 꼬리표는 글자 그대로 둔다
+      const body = text.slice(last, mm.index);
+      let cut = 0; const bre = /[.?!…]+["'”’)]*\s+/g; let b;
+      while ((b = bre.exec(body))) cut = b.index + b[0].length;
+      const cited = body.slice(cut);
+      if (body.slice(0, cut)) el.append(document.createTextNode(body.slice(0, cut)));
+      if (cited.trim()) {
+        const span = h('span', { class: 'src', role: 'button', tabindex: '0' }, cited);
+        span._cites = [c];
+        span.title = `출처: ${c.label}`;
+        const open = e => { e.stopPropagation(); showPopover(span, span._cites); };
+        span.addEventListener('click', open);
+        span.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } });
+        el.append(span); prevSrc = span;
+      } else if (prevSrc) { prevSrc._cites.push(c); prevSrc.title += `, ${c.label}`; }   // [입장 1][보고서 2]처럼 붙은 꼬리표
       last = re.lastIndex;
-      if (!c) { el.append(document.createTextNode(mm[0])); continue; }
-      const chip = h('button', { class: 'cite', type: 'button', title: '출처 보기', on: { click: e => showPopover(e.currentTarget, c) } }, mm[1].replace('문단', ''));
-      const punct = /^[.,!?)」』]+/.exec(text.slice(last));            // 칩 뒤 마침표가 홀로 다음 줄로 넘어가지 않게 붙여 둔다
-      if (punct) { el.append(h('span', { class: 'cite-wrap' }, chip, punct[0])); last += punct[0].length; re.lastIndex = last; }
-      else el.append(chip);
     }
     if (last < text.length) el.append(document.createTextNode(text.slice(last)));
   }
-  function showPopover(anchor, c) {
+  function showPopover(anchor, cites) {
     const pop = $('#popover');
-    const kind = { report: '보고서', stance: '입장 카드', interview: '인터뷰 답', profile: '약력', past: '지난 발언' }[c.kind] || '';
-    fill(pop, h('div', { class: 'lab' }, icon('doc'), c.label, kind ? tag(kind, 'plain') : null), h('div', { text: c.text }));
+    const KIND = { report: '보고서', stance: '입장 카드', interview: '인터뷰 답', profile: '약력', past: '지난 발언' };
+    fill(pop, [].concat(cites).map(c => h('div', { class: 'src-item' },
+      h('div', { class: 'lab' }, c.label, KIND[c.kind] && !c.label.includes(KIND[c.kind]) ? h('span', { class: 'kind', text: KIND[c.kind] }) : null),
+      h('div', { text: c.text }))));
     pop.hidden = false;
     const r = anchor.getBoundingClientRect();
     const w = Math.min(340, innerWidth - 24);
@@ -522,8 +535,7 @@
   function botRow(cls, kids, ts) {
     return h('div', { class: `row bot other first${cls ? ` ${cls}` : ''}` },
       h('span', { class: 'av bot', 'aria-hidden': 'true' }, icon('spark')),
-      h('div', { class: 'col' }, h('div', { class: 'who', text: '회의 도우미' }),
-        h('div', { class: 'line' }, h('div', { class: 'bubble' }, kids), ts ? h('span', { class: 'stamp', text: fmtTime(ts) }) : null)));
+      h('div', { class: 'col' }, whoLine('회의 도우미', [chipTag('AI')], ts), h('div', { class: 'bubble' }, kids)));
   }
   function facilitatorCard(m) {
     return botRow('', [m.text], m.ts);
@@ -600,9 +612,9 @@
         const [vl, vc] = VERDICT[c.verdict] || ['판정 없음', 'info'];
         return h('li', { class: vc || 'info' }, h('b', { class: 'k', text: vl }), h('span', { text: c.note || c.claim }));
       }),
-      ...(v.missed || []).map(x => h('li', { class: 'warn' }, h('b', { class: 'k', text: '놓친 점' }), h('span', { text: x }))),
-      v.devil ? h('li', { class: 'info' }, h('b', { class: 'k', text: '반대 관점' }), h('span', { text: v.devil.text }),
-        v.devil.cite ? h('span', { class: 's', text: v.devil.cite }) : null) : null,
+      ...(v.missed || []).map(x => h('li', { class: 'warn' }, h('b', { class: 'k', text: '놓친 점' }), h('span', { text: x.replace(/\s*\[[^\]]{1,30}\]/g, '') }))),
+      v.devil ? h('li', { class: 'info' }, h('b', { class: 'k', text: '반대 관점' }),
+        h('span', { class: v.devil.cite ? 'src plain' : '', title: v.devil.cite ? `출처: ${v.devil.cite}` : '', text: v.devil.text })) : null,
     ];
     const target = v.target_text || '';
     const bubble = h('div', { class: 'bubble' },
@@ -612,9 +624,8 @@
         h('div', { class: 'claims' }, (v.claims || []).map(claimRow)),
         h('div', { class: 'hint', text: `고칠지는 사람이 정해요 · ${engineLabel(v.engine)}` })) : null);
     return h('div', { class: `row mini verify other c${req.color || 0} first${chained(m, prev) ? ' chain' : ''}` },
-      avatar(req, { mini: true }),
-      h('div', { class: 'col' }, miniHead(req, '검증'),
-        h('div', { class: 'line' }, bubble, h('span', { class: 'stamp', text: fmtTime(m.ts) }))));
+      miniAvatar(req),
+      h('div', { class: 'col' }, miniHead(req, '2차 검증', m.ts), bubble));
   }
   function claimRow(c) {
     const [vl, vc] = VERDICT[c.verdict] || ['판정 없음', ''];
@@ -1003,7 +1014,7 @@
     $('#meBtn').addEventListener('click', e => { e.stopPropagation(); closeMenus('#meMenu'); $('#meMenu').hidden = !$('#meMenu').hidden; });
     document.addEventListener('click', e => {
       if (!e.target.closest('.pop-wrap')) closeMenus();
-      if (!$('#popover').hidden && !e.target.closest('.popover') && !e.target.closest('.cite')) $('#popover').hidden = true;
+      if (!$('#popover').hidden && !e.target.closest('.popover') && !e.target.closest('.src')) $('#popover').hidden = true;
       const b = e.target.closest('[data-act]');
       if (!b) return;
       closeMenus();

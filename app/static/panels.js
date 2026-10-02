@@ -727,11 +727,12 @@ window.MMPanels = function (ctx) {
     const bubble = h('div', { class: 'bubble' });
     renderCited(bubble, x.text || '', x.citations || []);
     return h('div', { class: `row mini first c${m.color || 0}${x.abstain ? ' abstain' : ''}`, style: 'margin-top:0' },
-      avatar(m, { mini: true }),
+      h('span', { class: `av mini c${m.color || 0}`, 'aria-hidden': 'true' }, 'AI'),
       h('div', { class: 'col' },
-        h('div', { class: 'who' }, `${m.name}의 미니미`,
-          x.abstain ? h('span', { class: 'ai', text: x.abstain === 'commit' ? '약속 보류' : '확인 필요' }) : null),
-        h('div', { class: 'line' }, bubble, h('span', { class: 'stamp', text: fmtTime(x.ts) }))));
+        h('div', { class: 'who' }, h('b', { text: `${m.name} 미니미` }),
+          x.abstain ? h('span', { class: 'chip-tag', text: x.abstain === 'commit' ? '약속 보류' : '확인 필요' }) : null,
+          x.ts ? h('time', { text: fmtTime(x.ts) }) : null),
+        bubble));
   }
 
   function renderDigest() {

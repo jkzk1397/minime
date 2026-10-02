@@ -82,6 +82,7 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
     last4 = [m for m in before if m.kind in ("human", "mini")][-4:]
     mini_recent = sum(1 for m in last4 if m.kind == "mini")
     msg_toks = set(tokens(msg.text))
+    query = ko.strip_address(msg.text, list(names.values()))
 
     cands: list[Candidate] = []
     for uid, p in room.personas.items():
@@ -95,7 +96,7 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
         elif not c.called and recent and recent[-1].kind == "mini" and recent[-1].user_id == uid:
             c.excluded = "연속 발언 금지"
         idx = await get_index(room, uid)
-        c.hits = await idx.search(msg.text, k=5, kinds=SPEECH_KINDS)
+        c.hits = await idx.search(query, k=5, kinds=SPEECH_KINDS)
         ev_ret = max((h.strength for h in c.hits), default=0.0)       # 발언 자체를 덮는 근거
         stance = _main_stance(p, issue_id) if issue_id else None
         if stance:

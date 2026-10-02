@@ -186,3 +186,12 @@ def mentions(text: str, names: dict[str, str]) -> list[str]:
 def addressed_mini(text: str, names: dict[str, str]) -> list[str]:
     """명시적으로 미니미를 부른 경우 ('@민수', '민수 미니미')."""
     return [uid for uid, n in names.items() if n and re.search(rf"(@{re.escape(n)}|{re.escape(n)}\s?미니미)", text)]
+
+
+def strip_address(text: str, names: list[str]) -> str:
+    """검색 질의에서 호칭('민수 미니미', '@하은', '하은아')을 뺀다. 이름은 근거 문단에 없어서 점수를 깎기 때문."""
+    t = text
+    for n in sorted((x for x in names if x), key=len, reverse=True):
+        t = re.sub(rf"@?{re.escape(n)}\s?(미니미|님|씨|아|야|이가|이는|이도|이)?(?=[\s,?!.]|$)", " ", t)
+    t = re.sub(r"미니미", " ", t)
+    return re.sub(r"\s+", " ", t).strip() or text

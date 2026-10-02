@@ -565,6 +565,7 @@ async def ws_room(ws: WebSocket, room_id: str, uid: str):
     try:
         await ws.send_json({"type": "hello", "you": uid, "observer": observer, "server_time": time.time()})
         await ws.send_json(orchestrator.room_payload(room))
+        await ws.send_json(await orchestrator.members_payload(room_id))
         await ws.send_json({"type": "history", "messages": [m.to_dict() for m in room.messages[-250:]],
                             "drift": room.drift[-80:], "gate": room.gate_log[-1] if room.gate_log else None})
         await ws.send_json(llm.status())

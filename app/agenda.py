@@ -81,7 +81,8 @@ def detect_position(issue: Issue | None, text: str) -> str:
                     continue
                 used.append((m.start(), m.end()))
                 found = True
-                sc += 1.0 if kw == label else 0.5
+                # 선택지 라벨('B안')은 강한 신호, 단서어('무대')만 나온 건 약한 신호 (입장 표현이 붙어야 커진다)
+                sc += 1.0 if kw == label else 0.25
                 after = t[m.end(): m.end() + 14]
                 before = t[max(0, m.start() - 6): m.start()]
                 if any(c in after for c in ko.NEG_CUES) or "말고" in before:
@@ -93,6 +94,8 @@ def detect_position(issue: Issue | None, text: str) -> str:
     if not scores:
         return ""
     best = max(scores, key=lambda k: scores[k])
+    if 0 < scores[best] < 0.5:
+        return ""                                  # 단서어가 지나가듯 한 번 나온 정도로는 입장이 아니다
     if scores[best] <= 0:
         if len(issue.options) == 2 and len(scores) == 1:
             return next(o["label"] for o in issue.options if o["label"] != best)
@@ -101,6 +104,12 @@ def detect_position(issue: Issue | None, text: str) -> str:
     if rest and scores[best] - max(rest) < 0.3:
         return ""
     return best
+
+
+def stance_position(issue: Issue | None, text: str) -> str:
+    """발언의 입장. 질문 문장('타 대학 사례는 어떤 게 있어?')은 입장이 아니므로 뺀다."""
+    plain = [s for s in ko.sentences(text) if not ko.QUESTION.search(s)]
+    return detect_position(issue, " ".join(plain)) if plain else ""
 
 
 def detect_issue(room: Room, text: str) -> tuple[str, float]:

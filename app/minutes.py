@@ -11,7 +11,7 @@ import time
 from dataclasses import asdict
 
 from . import config, ko, llm
-from .agenda import detect_position
+from .agenda import detect_position, stance_position
 from .models import Decision, Message, Room, new_id
 from .persona import get_index, history_text, strip_cites
 
@@ -157,7 +157,7 @@ async def make_minutes(room: Room) -> dict:
             if m.issue_id != issue.id or m.meta.get("abstain"):
                 continue
             key = f"{m.user_id}:{m.kind}"
-            pos = detect_position(issue, m.text)
+            pos = stance_position(issue, m.text) if m.kind == "human" else detect_position(issue, m.text)
             if key in ops and ops[key]["position"] and not pos:
                 continue                     # 입장이 드러난 발언을 대표 의견으로 남긴다
             ops[key] = {"who": _who(room, m), "uid": m.user_id, "kind": m.kind, "text": strip_cites(m.text),

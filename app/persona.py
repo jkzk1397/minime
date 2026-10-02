@@ -11,7 +11,7 @@ import re
 import time
 
 from . import config, ko, llm
-from .agenda import detect_issue, detect_position, issue_query
+from .agenda import detect_issue, detect_position, issue_query, stance_position
 from .models import Issue, Message, Persona, Report, ReturnQuestion, Room, Stance, new_id
 from .retrieval import Chunk, Hit, Index, lexical_support, text_similarity, tokens
 
@@ -375,7 +375,10 @@ def _rule_sentences(p: Persona, act: str, trigger: str, stance: Stance | None, l
     evid = sorted([h for h in hits if h.chunk.kind in ("report", "profile") and h.chunk.label in pool],
                   key=lambda h: -h.strength)
     if act == "answer" or not stance:
-        top = next((h for h in hits if h.chunk.label in pool), None)
+        # 사실을 묻는 질문: 보고서 문장이 있으면 그것부터 (입장 카드는 두 번째 문장으로)
+        facts = [h for h in hits if h.chunk.kind in ("report", "profile") and h.chunk.label in pool
+                 and h.strength >= config.EVIDENCE_MIN * 0.8]
+        top = max(facts, key=lambda h: h.strength) if facts else next((h for h in hits if h.chunk.label in pool), None)
         if top:
             if top.chunk.kind in ("stance", "interview") and top.chunk.ref:
                 st = next((s for s in p.stances if s.id == top.chunk.ref), None)
@@ -383,7 +386,7 @@ def _rule_sentences(p: Persona, act: str, trigger: str, stance: Stance | None, l
             else:
                 sent = ko.polite(best_sentence(top.chunk.text, trigger))
             out.append({"text": sent, "cites": [top.chunk.label], "support": 1.0})
-            if stance and labels.get(stance.id) != top.chunk.label and act != "answer":
+            if stance and labels.get(stance.id) != top.chunk.label and text_similarity(stance.claim, sent) < 0.5:
                 out.append({"text": stance.claim, "cites": [labels[stance.id]], "support": 1.0})
         return out[:2]
     lab = labels[stance.id]
@@ -446,7 +449,7 @@ def infer_memory(room: Room) -> dict[str, list[Stance]]:
                 continue
             last_pos, last_msg = "", None
             for m in msgs:
-                pos = detect_position(issue, m.text)
+                pos = stance_position(issue, m.text)
                 if pos or not issue.options:
                     last_pos, last_msg = pos, m
             if not last_msg:

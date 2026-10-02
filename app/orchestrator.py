@@ -124,7 +124,7 @@ async def handle_human(room_id: str, uid: str, text: str, meta: dict | None = No
     if not issue_id and (dist is None or dist < config.DRIFT_THRESHOLD):
         issue_id = room.current_issue                     # 쟁점 단서가 없으면 지금 논의 중인 쟁점으로 본다 (잡담은 제외)
     issue = room.issue(issue_id)
-    position = agenda.detect_position(issue, text)
+    position = agenda.stance_position(issue, text)
     msg = Message("human", text, uid, meta=dict(meta or {}), issue_id=issue_id)
     if position:
         msg.meta["position"] = position

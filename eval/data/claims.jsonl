@@ -1,0 +1,22 @@
+{"uid": "jungmin", "text": "B안으로 가자. 그게 맞아", "planted": "conflict", "note": "지난 회의에 A안 쪽 발언"}
+{"uid": "jongwon", "text": "B안으로 가는 게 맞다고 생각해", "planted": "conflict", "note": "확인된 입장은 A안"}
+{"uid": "dongjun", "text": "A안으로 가자. 공연이 최고야", "planted": "conflict", "note": "확인된 입장은 B안"}
+{"uid": "hyejung", "text": "A안으로 하자", "planted": "conflict", "note": "확인된 입장은 B안"}
+{"uid": "jungmin", "text": "타 대학 사례로만 조사하자", "planted": "conflict", "note": "확인된 입장은 설문조사"}
+{"uid": "dongjun", "text": "설문조사로 가자. 사례 조사는 필요 없어", "planted": "conflict", "note": "확인된 입장은 타 대학 사례"}
+{"uid": "jongwon", "text": "공연은 무조건 학생들이 제일 좋아해", "planted": "unsupported", "note": "단정 + 만족도 자료와 반대"}
+{"uid": "jungmin", "text": "학생 참여 프로그램은 항상 만족도가 더 높아", "planted": "unsupported", "note": "단정 (1년 자료뿐)"}
+{"uid": "jongwon", "text": "작년 방문객이 3만 명이었으니까 공연이 꼭 필요해", "planted": "unsupported", "note": "자료에 없는 숫자"}
+{"uid": "jungmin", "text": "다른 학교는 전부 공연을 없앴어", "planted": "unsupported", "note": "사례는 한 대학뿐"}
+{"uid": "dongjun", "text": "체험 부스는 절대 실패하지 않아", "planted": "unsupported", "note": "본인 보고서와 반대"}
+{"uid": "jongwon", "text": "작년 예산의 90%가 공연비였어", "planted": "unsupported", "note": "실제 60% (숫자 불일치: 어려운 사례)"}
+{"uid": "hyejung", "text": "만족도 조사 응답자가 2천 명이었어", "planted": "unsupported", "note": "실제 812명 (숫자 불일치: 어려운 사례)"}
+{"uid": "jungmin", "text": "슬라이드는 30장 정도가 적당해", "planted": "unsupported", "note": "본인 보고서는 12장 이내 (어려운 사례)"}
+{"uid": "jongwon", "text": "SNS 게시물 70%가 공연 영상이었으니 홍보 효과가 있어", "planted": null}
+{"uid": "hyejung", "text": "부스 만족도가 4.2점으로 공연 3.6점보다 높았어", "planted": null}
+{"uid": "dongjun", "text": "작년에 체험 부스 3곳이 운영 인원이 부족해서 문을 닫았어", "planted": null}
+{"uid": "jungmin", "text": "발표는 문제 제기, 현황 데이터, 제안 순서가 좋아", "planted": null}
+{"uid": "jongwon", "text": "리허설은 발표 전에 최소 두 번 해야 해", "planted": null}
+{"uid": "hyejung", "text": "학생들은 직접 참여하는 프로그램 확대를 가장 원했어", "planted": null}
+{"uid": "dongjun", "text": "한 대학은 공연을 1팀으로 줄이고도 방문객이 15% 늘었어", "planted": null}
+{"uid": "jungmin", "text": "숫자 데이터는 그래프로 보여 주면 좋아", "planted": null}

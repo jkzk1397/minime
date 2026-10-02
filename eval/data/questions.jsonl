@@ -1,0 +1,36 @@
+{"uid": "hyejung", "q": "작년 축제 예산은 총 얼마였어?", "answerable": true, "gold": ["보고서 1문단"]}
+{"uid": "hyejung", "q": "연예인 섭외비가 예산에서 몇 퍼센트였어?", "answerable": true, "gold": ["보고서 1문단"]}
+{"uid": "hyejung", "q": "만족도 조사 응답자는 몇 명이었어?", "answerable": true, "gold": ["보고서 2문단"]}
+{"uid": "hyejung", "q": "동아리 부스 만족도는 몇 점이었어?", "answerable": true, "gold": ["보고서 2문단"]}
+{"uid": "hyejung", "q": "학생들이 내년 축제에 가장 바라는 게 뭐였어?", "answerable": true, "gold": ["보고서 3문단"]}
+{"uid": "hyejung", "q": "참여형 프로그램이 시간당 비용이 왜 더 낮아?", "answerable": true, "gold": ["보고서 4문단"]}
+{"uid": "hyejung", "q": "연예인 공연은 완전히 없애도 돼?", "answerable": true, "gold": ["보고서 5문단", "입장 1"]}
+{"uid": "hyejung", "q": "자료 조사는 설문이랑 타 대학 사례 중 뭘로 할 거야?", "answerable": true, "gold": ["인터뷰 1"]}
+{"uid": "hyejung", "q": "발표에서 맡고 싶은 역할이 뭐야?", "answerable": true, "gold": ["인터뷰 2"]}
+{"uid": "hyejung", "q": "통계학 수업에서 설문 분석해 본 적 있어?", "answerable": true, "gold": ["약력 1"]}
+{"uid": "dongjun", "q": "작년에 문 닫은 체험 부스가 몇 곳이야?", "answerable": true, "gold": ["보고서 2문단"]}
+{"uid": "dongjun", "q": "상대 조가 할 것 같은 반론이 뭐야?", "answerable": true, "gold": ["보고서 1문단"]}
+{"uid": "dongjun", "q": "타 대학 사례는 어떤 게 있어?", "answerable": true, "gold": ["보고서 4문단", "입장 2"]}
+{"uid": "dongjun", "q": "운영 인력은 어떻게 확보하자고 했어?", "answerable": true, "gold": ["보고서 3문단", "입장 1"]}
+{"uid": "jongwon", "q": "SNS 게시물 중 공연 영상 비율이 얼마야?", "answerable": true, "gold": ["보고서 2문단", "입장 1"]}
+{"uid": "jongwon", "q": "발표 시간과 질의응답 시간은 몇 분이야?", "answerable": true, "gold": ["보고서 4문단", "입장 2"]}
+{"uid": "jongwon", "q": "리허설은 몇 번 해야 해?", "answerable": true, "gold": ["보고서 5문단", "입장 2"]}
+{"uid": "jungmin", "q": "슬라이드는 몇 장으로 만들 거야?", "answerable": true, "gold": ["보고서 2문단"]}
+{"uid": "jungmin", "q": "발표 흐름은 어떤 순서로 구성해?", "answerable": true, "gold": ["보고서 1문단"]}
+{"uid": "jungmin", "q": "청중 공감을 얻으려면 어떤 자료가 효과적이야?", "answerable": true, "gold": ["보고서 3문단"]}
+{"uid": "hyejung", "q": "무대 음향 장비 대여 업체는 알아봤어?", "answerable": false}
+{"uid": "hyejung", "q": "축제 날 비 오면 야외 부스는 어떻게 해?", "answerable": false}
+{"uid": "hyejung", "q": "총학생회장 연락처 알아?", "answerable": false}
+{"uid": "hyejung", "q": "올해 섭외 후보 가수는 누구야?", "answerable": false}
+{"uid": "hyejung", "q": "자원봉사자 모집 공고는 언제 올려?", "answerable": false}
+{"uid": "hyejung", "q": "작년 축제 쓰레기 처리 비용은 얼마였어?", "answerable": false}
+{"uid": "dongjun", "q": "리허설 장소 예약했어?", "answerable": false}
+{"uid": "dongjun", "q": "토론대회 상금은 얼마였어?", "answerable": false}
+{"uid": "dongjun", "q": "발표 자료 PPT 템플릿은 뭐 쓸 거야?", "answerable": false}
+{"uid": "dongjun", "q": "축제 날 날씨 예보 확인했어?", "answerable": false}
+{"uid": "jongwon", "q": "축제 티켓 가격은 얼마야?", "answerable": false}
+{"uid": "jongwon", "q": "교수님 면담은 언제로 잡았어?", "answerable": false}
+{"uid": "jongwon", "q": "외부 방문객 주차 공간은 충분해?", "answerable": false}
+{"uid": "jungmin", "q": "인터뷰 영상 촬영 장비 빌렸어?", "answerable": false}
+{"uid": "jungmin", "q": "슬라이드 폰트는 뭐 쓸 거야?", "answerable": false}
+{"uid": "jungmin", "q": "발표 날 의상 정했어?", "answerable": false}

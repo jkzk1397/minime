@@ -134,7 +134,10 @@ def issue_query(issue: Issue) -> str:
 
 # ---------------------------------------------------------------- 안건 거리
 def distance(room: Room, text: str) -> float | None:
-    """한 발언의 안건 거리. 내용어가 없는 짧은 맞장구는 None (거리 계산에서 뺀다)."""
+    """한 발언의 안건 거리. 내용어가 없는 짧은 맞장구는 None (거리 계산에서 뺀다).
+    안건·쟁점이 하나도 없는 방은 잴 기준이 없으므로 None (모든 발언이 '이탈'로 보이지 않게)."""
+    if not has_agenda(room):
+        return None
     names = {p.name for p in room.personas.values()}
     toks = {t for t in _tok_set(text) if t not in _NAME_TOKENS and t not in names
             and not any(t.startswith(n) for n in names)}
@@ -146,6 +149,10 @@ def distance(room: Room, text: str) -> float | None:
     return round(max(0.0, 1.0 - min(1.0, sim)), 3)
 
 
+def has_agenda(room: Room) -> bool:
+    return bool((room.agenda or "").strip() or room.issues)
+
+
 def remaining_issues(room: Room) -> list[Issue]:
     return [i for i in room.issues if i.status not in ("decided", "pending")]
 
@@ -153,6 +160,8 @@ def remaining_issues(room: Room) -> list[Issue]:
 async def check_drift(room: Room) -> dict | None:
     """최근 K개 거리가 모두 임계값 위면 안건 상기 후보. 모델이 있으면 한 번 확인한다."""
     import time
+    if not has_agenda(room):
+        return None
     pts = [d for d in room.drift if d.get("distance") is not None]
     if len(pts) < config.DRIFT_K or time.time() - room.last_reminder < config.DRIFT_COOLDOWN_SEC:
         return None
@@ -183,6 +192,8 @@ async def check_drift(room: Room) -> dict | None:
 
 
 def reminder_text(room: Room, remaining: list[dict]) -> str:
+    if not room.issues:
+        return f"잠깐, 대화가 안건({room.agenda})에서 조금 벗어난 것 같아요. 안건으로 돌아가 볼까요?"
     if not remaining:
         return "잠깐, 대화가 안건에서 조금 벗어난 것 같아요. 쟁점은 모두 정리됐으니 회의를 마무리해도 좋아요."
     nums = {i.id: n for n, i in enumerate(room.issues, 1)}

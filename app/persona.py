@@ -444,6 +444,7 @@ def infer_memory(room: Room) -> dict[str, list[Stance]]:
             continue
         for issue in room.issues:
             msgs = [m for m in room.messages if m.kind == "human" and m.user_id == uid and m.ts >= started
+                    and not m.meta.get("after_end")
                     and (m.issue_id == issue.id or detect_issue(room, m.text)[0] == issue.id)]
             if not msgs:
                 continue

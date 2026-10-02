@@ -66,15 +66,27 @@ def pick_examples(text: str, k: int = 3) -> list[dict]:
     return sorted(ex, key=lambda e: -text_similarity(text, e["message"]))[:k]
 
 
+def called_uids(room: Room, text: str, speaker: str) -> set[str]:
+    """이름을 불러 물은 사람들 (미니미 호출, 또는 질문·약속 요청에서 이름을 부름). 말한 사람 본인은 뺀다."""
+    names = {u: p.name for u, p in room.personas.items()}
+    called = set(ko.addressed_mini(text, names))
+    if ko.question_kind(text) or ko.COMMIT.search(text):
+        called |= set(ko.mentions(text, names))
+    called.discard(speaker)
+    return called
+
+
+def calls_mini(room: Room, text: str, speaker: str) -> bool:
+    """대리 참석 중인 미니미를 불렀나 (호출 응답은 새 발언이 와도 취소하지 않는다)."""
+    return any((p := room.personas.get(u)) and p.mini_on for u in called_uids(room, text, speaker))
+
+
 async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing: list[str]) -> dict:
     names = {u: p.name for u, p in room.personas.items()}
     q_kind = ko.question_kind(msg.text)
     is_q = bool(q_kind)
     is_commit = bool(ko.COMMIT.search(msg.text))
-    called = set(ko.addressed_mini(msg.text, names))
-    if is_q or is_commit:
-        called |= set(ko.mentions(msg.text, names))
-    called.discard(msg.user_id)
+    called = called_uids(room, msg.text, msg.user_id)
     now = time.time()
     pos_i = next((i for i in range(len(room.messages) - 1, -1, -1) if room.messages[i].id == msg.id), len(room.messages))
     before = room.messages[:pos_i]
@@ -85,7 +97,7 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
     query = ko.strip_address(msg.text, list(names.values()))
 
     cands: list[Candidate] = []
-    for uid, p in room.personas.items():
+    for uid, p in list(room.personas.items()):          # 안에서 await 하므로 복사본으로 돈다
         if not p.mini_on or uid == msg.user_id:
             continue
         c = Candidate(uid, p.name, called=uid in called, commit=uid in called and is_commit)
@@ -142,11 +154,11 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
     # 1) 이름을 불러 물은 미니미 (호출)
     for c in [c for c in cands if c.called]:
         if c.commit:
-            actions.append({"uid": c.uid, "type": "abstain", "reason": "commit", "act": "answer"})
+            actions.append({"uid": c.uid, "type": "abstain", "reason": "commit", "act": "answer", "called": True})
         elif c.ev < config.EVIDENCE_MIN:
-            actions.append({"uid": c.uid, "type": "abstain", "reason": "no_evidence", "act": "answer"})
+            actions.append({"uid": c.uid, "type": "abstain", "reason": "no_evidence", "act": "answer", "called": True})
         else:
-            actions.append({"uid": c.uid, "type": "speak", "act": c.act})
+            actions.append({"uid": c.uid, "type": "speak", "act": c.act, "called": True})
     if actions:
         zone, reason = "called", "이름을 불러 물어봄 → 호출된 미니미가 응답 (근거 없으면 기권)"
     else:

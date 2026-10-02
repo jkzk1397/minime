@@ -156,7 +156,7 @@ async def create_room(body: RoomIn):
     if body.seed:
         seed.seed_room(room)
     room.title = body.title.strip()[:60] or room.title
-    if body.agenda:
+    if body.agenda.strip() or body.issues:               # 안건 제목이 비어도 쟁점은 남긴다
         await orchestrator.set_agenda(body.room_id, body.agenda, [i.model_dump() for i in body.issues] or None)
     hub.save_soon(body.room_id, 0.1)
     return orchestrator.room_payload(room)
@@ -183,8 +183,11 @@ async def reset_room(room_id: str, body: ResetIn):
         from .models import Room
         fresh = Room(room_id=room_id, title=old.title, agenda=old.agenda, issues=old.issues,
                      personas=old.personas)
+        for i in fresh.issues:                           # 결정을 지웠으니 쟁점 상태도 처음으로
+            i.status = "open"
         for p in fresh.personas.values():
             p.mini_on, p.questions, p.last_digest = False, [], {}
+            p.away_marker, p.away_since, p.last_spoke = 0, 0.0, 0.0
             p.touch()
     hub.replace(fresh)
     await hub.broadcast(room_id, {"type": "reset"})
@@ -267,6 +270,7 @@ async def member_detail(room_id: str, uid: str):
         ri = [x.id for x in p.reports].index(r["id"])
         r["labels"] = [persona.report_label(p, ri, i) for i in range(len(r["paragraphs"]))]
     d["readiness"] = await persona.readiness(room, uid)
+    d["last_digest"] = orchestrator.fresh_digest(room, uid)   # 이미 답한 질문·결정은 지금 상태로
     return d
 
 
@@ -492,8 +496,17 @@ class QAnswerIn(BaseModel):
 @app.post("/api/rooms/{room_id}/members/{uid}/questions/{qid}/answer")
 async def question_answer(room_id: str, uid: str, qid: str, body: QAnswerIn):
     _member(room_id, uid)
-    await orchestrator.answer_question(room_id, uid, qid, body.text[:400], body.share)
+    try:
+        await orchestrator.answer_question(room_id, uid, qid, body.text[:400], body.share)
+    except KeyError as e:
+        raise HTTPException(404, _msg(e))
+    except ValueError as e:
+        raise HTTPException(409 if "이미" in str(e) else 400, _msg(e))
     return await member_detail(room_id, uid)
+
+
+def _msg(e: Exception) -> str:
+    return str(e.args[0]) if e.args else str(e)
 
 
 # ---------------------------------------------------------------- 회의록 내보내기
@@ -503,6 +516,7 @@ def minutes_md(room_id: str):
     m = room.minutes
     if not m:
         raise HTTPException(404, "아직 회의록이 없어요. 회의를 종료하면 만들어져요.")
+    minutes.refresh_decisions(room, m)                   # 회의 뒤 승인·이의가 반영된 지금 결정 상태로
     lines = [f"# {room.title or room.room_id} 회의록", "", f"- 안건: {m.get('agenda', '')}",
              f"- 작성: {time.strftime('%Y-%m-%d %H:%M', time.localtime(m.get('ts', time.time())))}", "",
              "## 요약", m.get("summary", ""), ""]
@@ -603,54 +617,81 @@ async def _handle_event(room_id: str, uid: str, observer: bool, ev: dict, ws: We
     if t == "ping":
         await ws.send_json({"type": "pong", "ts": time.time()})
         return
-    if observer and t not in ("ping",):
+    if observer:
         return                                           # 관전자는 보기만 한다 (시연은 REST로 조작)
     room = hub.room(room_id)
     if uid not in room.personas:
         return
+    if t == "typing":
+        hub.set_typing(room_id, uid, bool(ev.get("on")))
+        await hub.broadcast(room_id, {"type": "typing", "user_id": uid, "mini": False, "on": bool(ev.get("on"))})
+        return
+    # 나머지(발언·검증·종료·복귀 요약 등 LLM을 부를 수 있는 처리)는 백그라운드로: 받기 루프가 막히지 않게.
+    # 작업은 만든 순서대로 시작하고, 순서가 중요한 처리(발언·안건·종료)는 방별 잠금으로 줄을 선다.
+    hub.spawn(room_id, _run_event(room_id, uid, t, ev, ws))
+
+
+async def _ws_send(ws: WebSocket, payload: dict) -> None:
     try:
-        if t == "message":
-            text = (ev.get("text") or "").strip()[:MAX_TEXT]
-            if text:
-                meta = {}
-                if ev.get("refined_from"):
-                    meta = {"refined_from": str(ev["refined_from"])[:MAX_TEXT], "refined": True}
-                await orchestrator.handle_human(room_id, uid, text, meta)
-        elif t == "typing":
-            hub.set_typing(room_id, uid, bool(ev.get("on")))
-            await hub.broadcast(room_id, {"type": "typing", "user_id": uid, "mini": False, "on": bool(ev.get("on"))})
-        elif t == "refine":
-            text = (ev.get("text") or "").strip()[:MAX_TEXT]
-            if text:
-                await ws.send_json(await orchestrator.refine(room_id, uid, text))
-        elif t == "away":
-            await orchestrator.set_away(room_id, uid, bool(ev.get("value")))
-        elif t == "agenda":
-            issues = ev.get("issues")
-            await orchestrator.set_agenda(room_id, str(ev.get("title") or ""), issues if isinstance(issues, list) else None)
-        elif t == "mode":
-            await orchestrator.set_mode(room_id, str(ev.get("mode")), uid)
-        elif t == "end_meeting":
-            await orchestrator.end_meeting(room_id)
-        elif t == "verify":
-            await orchestrator.request_verify(room_id, uid, str(ev.get("message_id")))
-        elif t == "mark_decision":
-            await orchestrator.mark_decision(room_id, uid, str(ev.get("message_id")))
-        elif t == "decide":
-            await orchestrator.respond_decision(room_id, uid, str(ev.get("decision_id")), str(ev.get("action")),
-                                                str(ev.get("note") or "")[:300])
-        elif t == "answer_question":
-            await orchestrator.answer_question(room_id, uid, str(ev.get("question_id")), str(ev.get("text") or "")[:400],
-                                               bool(ev.get("share", True)))
-        elif t == "digest":
-            p = room.personas[uid]
-            if p.last_digest:
-                await ws.send_json({"type": "away_digest", "user_id": uid, **p.last_digest})
+        await ws.send_json(payload)
+    except Exception:
+        pass
+
+
+async def _run_event(room_id: str, uid: str, t: str, ev: dict, ws: WebSocket) -> None:
+    try:
+        await _dispatch(room_id, uid, t, ev, ws)
+    except asyncio.CancelledError:
+        raise
     except (KeyError, ValueError) as e:
-        await ws.send_json({"type": "error", "text": str(e)})
+        await _ws_send(ws, {"type": "error", "text": _msg(e)})
     except Exception as e:
-        log.exception("event %s failed", t)
-        await ws.send_json({"type": "error", "text": f"처리 중 오류가 났어요: {type(e).__name__}"})
+        log.exception("event %s failed room=%s uid=%s", t, room_id, uid)
+        await _ws_send(ws, {"type": "error", "text": f"처리 중 오류가 났어요: {type(e).__name__}"})
+
+
+async def _dispatch(room_id: str, uid: str, t: str, ev: dict, ws: WebSocket) -> None:
+    room = hub.room(room_id)
+    if uid not in room.personas:                         # 그 사이 방이 초기화됐으면 무시
+        return
+    if t == "message":
+        text = (ev.get("text") or "").strip()[:MAX_TEXT]
+        if text:
+            meta = {}
+            if ev.get("refined_from"):
+                meta = {"refined_from": str(ev["refined_from"])[:MAX_TEXT], "refined": True}
+            await orchestrator.handle_human(room_id, uid, text, meta)
+    elif t == "refine":
+        text = (ev.get("text") or "").strip()[:MAX_TEXT]
+        if text:
+            await _ws_send(ws, await orchestrator.refine(room_id, uid, text))
+    elif t == "away":
+        await orchestrator.set_away(room_id, uid, bool(ev.get("value")))
+    elif t == "agenda":
+        issues = ev.get("issues")
+        await orchestrator.set_agenda(room_id, str(ev.get("title") or ""), issues if isinstance(issues, list) else None)
+    elif t == "mode":
+        await orchestrator.set_mode(room_id, str(ev.get("mode")), uid)
+    elif t == "start_meeting":
+        await orchestrator.start_meeting(room_id)
+    elif t == "end_meeting":
+        if await orchestrator.end_meeting(room_id) is None:
+            raise ValueError("이미 회의가 끝났거나 회의록을 만드는 중이에요.")
+    elif t == "verify":
+        if await orchestrator.request_verify(room_id, uid, str(ev.get("message_id"))) is None:
+            raise KeyError("검증할 발언을 찾을 수 없어요.")
+    elif t == "mark_decision":
+        await orchestrator.mark_decision(room_id, uid, str(ev.get("message_id")))
+    elif t == "decide":
+        await orchestrator.respond_decision(room_id, uid, str(ev.get("decision_id")), str(ev.get("action")),
+                                            str(ev.get("note") or "")[:300])
+    elif t == "answer_question":
+        await orchestrator.answer_question(room_id, uid, str(ev.get("question_id")), str(ev.get("text") or "")[:400],
+                                           bool(ev.get("share", True)))
+    elif t == "digest":
+        dg = orchestrator.fresh_digest(room, uid)
+        if dg:
+            await _ws_send(ws, {"type": "away_digest", "user_id": uid, **dg})
 
 
 @app.exception_handler(HTTPException)

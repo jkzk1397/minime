@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 
 from . import interview, llm, orchestrator, persona, seed
@@ -109,6 +110,7 @@ SCENES = [
     },
 ]
 
+log = logging.getLogger("mymini")
 _state: dict[str, dict] = {}
 _tasks: dict[str, asyncio.Task] = {}
 
@@ -161,10 +163,14 @@ async def _run(room_id: str, first: int, auto: bool) -> None:
         await _emit(room_id, status="idle", step="")
         raise
     except Exception as e:                                  # 시연은 멈추지 않고 이유를 보여 준다
+        log.exception("demo scene %s failed room=%s", sc, room_id)
         await _emit(room_id, status="error", step=f"오류: {e}")
     finally:
-        if llm.force_rule() and state(room_id).get("forced_by_demo"):
-            llm.set_force_rule(False)
+        st = state(room_id)
+        if st.get("forced_by_demo"):                        # 시연이 끈 모델만 되돌리고, 표시는 한 번 쓰면 지운다
+            st["forced_by_demo"] = False
+            if llm.force_rule():
+                llm.set_force_rule(False)
 
 
 async def _sleep(room_id: str, s: float) -> None:
@@ -230,7 +236,7 @@ async def _do(room_id: str, step: dict) -> None:
         await _sleep(room_id, min(2.2, 0.5 + len(step["text"]) * 0.025))
         await hub.broadcast(room_id, {"type": "typing", "user_id": step["uid"], "mini": False, "on": False})
         _, task = await orchestrator.handle_human(room_id, step["uid"], step["text"])
-        await task
+        await asyncio.wait({task})                          # 새 발언에 취소돼도 시연은 계속 (취소를 다시 던지지 않는다)
     elif kind == "verify":
         target = next((m for m in reversed(room.messages) if m.kind == "human" and step["match"] in m.text), None)
         if target:
@@ -248,7 +254,8 @@ async def _do(room_id: str, step: dict) -> None:
             await _emit(room_id, step="모델 다시 켜기")
     elif kind == "end":
         await _emit(room_id, step="회의 종료 → 쟁점별 회의록 정리")
-        await orchestrator.end_meeting(room_id)
+        if await orchestrator.end_meeting(room_id) is None:
+            await _emit(room_id, step="이미 회의가 끝났어요 (회의록은 그대로)")
     elif kind == "decide":
         uid = step["uid"]
         d = next((x for x in room.decisions if uid in x.affected and step["match"] in x.text

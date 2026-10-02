@@ -270,7 +270,7 @@ async def _devil(room: Room, team, target: Message, issue_id: str, claims: list[
     pos = next((c["position"] for c in claims if c.get("position")), "")
     if not issue or not pos:
         return None
-    for uid, p in room.personas.items():
+    for uid, p in list(room.personas.items()):          # 안에서 await 하므로 복사본으로 돈다
         if uid == target.user_id:
             continue
         for st in p.confirmed(issue_id):

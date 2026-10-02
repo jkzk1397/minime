@@ -65,6 +65,11 @@ def respond(room: Room, decision_id: str, uid: str, action: str, note: str = "")
         raise KeyError("결정을 찾을 수 없어요.")
     if action not in ("approve", "object"):
         raise ValueError("action은 approve 또는 object")
+    if uid not in room.personas:
+        raise ValueError("방에 없는 팀원이에요.")
+    # '확인 필요'(쟁점·확인할 사람을 모름)는 팀원 누구나, 그 밖에는 확인 대상(불참자)만 답할 수 있다
+    if d.status != "needs_check" and uid not in d.affected:
+        raise ValueError("이 결정을 확인할 대상이 아니에요.")
     d.responses[uid] = {"action": action, "note": note.strip(), "ts": time.time()}
     if action == "object":
         d.status = "objected"
@@ -86,6 +91,30 @@ def decision_dict(room: Room, d: Decision) -> dict:
     x["by_name"] = room.personas[d.by].name if d.by in room.personas else ""
     x["affected_names"] = [room.personas[u].name for u in d.affected if u in room.personas]
     return x
+
+
+def refresh_decisions(room: Room, data: dict) -> bool:
+    """회의록(또는 결과 카드 meta)의 결정 상태를 지금 결정으로 다시 맞춘다. 바뀐 게 있으면 True.
+    회의가 끝난 뒤 복귀자가 승인·이의를 달면 상태가 바뀌기 때문이다."""
+    if not data:
+        return False
+    live = {d.id: d for d in room.decisions}
+    changed = False
+    for it in data.get("issues", []):
+        d = live.get((it.get("decision") or {}).get("id"))
+        if d is None:
+            continue
+        dd = decision_dict(room, d)
+        if it.get("decision") != dd or it.get("status") != d.status:
+            it["decision"], it["status"] = dd, d.status
+            changed = True
+    loose = data.get("loose_decisions") or []
+    for n, x in enumerate(loose):
+        d = live.get(x.get("id"))
+        if d is not None and (dd := decision_dict(room, d)) != x:
+            loose[n] = dd
+            changed = True
+    return changed
 
 
 # ---------------------------------------------------------------- 내가 빠진 사이
@@ -149,7 +178,7 @@ _MIN_SCHEMA = {"type": "object", "required": ["summary", "issues"],
 
 async def make_minutes(room: Room) -> dict:
     started = room.meeting.get("started_at") or 0
-    msgs = [m for m in room.messages if m.ts >= started and m.kind in ("human", "mini")]
+    msgs = [m for m in room.messages if m.ts >= started and m.kind in ("human", "mini") and not m.meta.get("after_end")]
     issues_out = []
     for issue in room.issues:
         ops: dict[str, dict] = {}

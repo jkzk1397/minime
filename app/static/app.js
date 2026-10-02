@@ -305,7 +305,9 @@
     };
     tick();
     if (m.status === 'live') timerT = setInterval(tick, 1000);
-    $('#endBtn').disabled = S.observer || m.status !== 'live';
+    const ended = m.status === 'ended';                            // 끝난 뒤에는 같은 자리에서 다음 회의를 연다
+    fill($('#endBtn'), icon(ended ? 'play' : 'flag'), ended ? '새 회의 시작' : '회의 종료 · 회의록');
+    $('#endBtn').disabled = S.observer || !(m.status === 'live' || ended);
   }
   function renderIssues() {
     const issues = (S.room && S.room.issues) || [];
@@ -945,6 +947,10 @@
     $('#inviteBtn').addEventListener('click', () => panels().openInvite());
     $('#endBtn').addEventListener('click', () => {
       $('#meMenu').hidden = true;
+      if (S.room && S.room.meeting && S.room.meeting.status === 'ended') {
+        confirmModal({ eyebrow: '새 회의', title: '다음 회의를 시작할까요?', body: '안건과 쟁점, 결정 기록은 그대로 이어져요. 지난 회의록은 대화에 남아 있어요.', ok: '시작하기', onOk: () => send({ type: 'start_meeting' }) });
+        return;
+      }
       confirmModal({ eyebrow: '회의 종료', title: '회의를 끝내고 회의록을 만들까요?', body: '쟁점별 의견과 결정 상태가 정리돼요. 보류된 결정은 불참자가 확인할 때까지 남아요.', ok: '끝내고 정리', onOk: () => send({ type: 'end_meeting' }) });
     });
     $('#themeBtn').addEventListener('click', () => {

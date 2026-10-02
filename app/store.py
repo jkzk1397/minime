@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -12,6 +13,7 @@ from fastapi import WebSocket
 from . import config
 from .models import Message, Persona, Room
 
+log = logging.getLogger("mymini")
 ROOM_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 UID_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 
@@ -30,8 +32,10 @@ class Hub:
         self.conns: dict[str, list[Conn]] = {}
         self.typing: dict[str, dict[str, float]] = {}
         self.tasks: dict[str, asyncio.Task] = {}        # 방별 진행 중인 생각 레인 작업 (세대 번호 취소)
+        self.bg: dict[str, set[asyncio.Task]] = {}      # 세대 번호로 취소되지 않는 작업 (호출 응답·복귀 요약·느린 WS 처리)
         self.gen: dict[str, int] = {}                   # 방별 세대 번호
-        self.locks: dict[str, asyncio.Lock] = {}
+        self.locks: dict[str, asyncio.Lock] = {}        # 방별 순서 보장 (사람 발언 처리·안건 변경·회의 종료)
+        self._lock_loops: dict[str, object] = {}
         self._save_handles: dict[str, asyncio.TimerHandle] = {}
         (config.DATA_DIR / "rooms").mkdir(parents=True, exist_ok=True)
 
@@ -50,6 +54,7 @@ class Hub:
                 try:
                     room = Room.from_dict(json.loads(p.read_text(encoding="utf-8")))
                 except Exception:
+                    log.exception("room file unreadable, starting empty: %s", p)
                     room = None
             if room is None:
                 room = Room(room_id=room_id)
@@ -61,15 +66,18 @@ class Hub:
             self.rooms[room_id] = room
             self.conns.setdefault(room_id, [])
             self.typing.setdefault(room_id, {})
-            self.locks.setdefault(room_id, asyncio.Lock())
             self.gen.setdefault(room_id, 0)
         return self.rooms[room_id]
 
     def replace(self, room: Room) -> None:
         """시연 초기화 등으로 방 전체를 바꿀 때 (접속은 유지)."""
-        task = self.tasks.pop(room.room_id, None)
-        if task and not task.done():
-            task.cancel()
+        me = asyncio.current_task() if _has_loop() else None
+        for task in [self.tasks.pop(room.room_id, None), *self.bg.pop(room.room_id, set())]:
+            if task and task is not me and not task.done():
+                try:
+                    task.cancel()
+                except RuntimeError:                    # 이미 닫힌 이벤트 루프의 작업
+                    pass
         self.rooms[room.room_id] = room
         self.gen[room.room_id] = self.gen.get(room.room_id, 0) + 1
         self.save_soon(room.room_id, 0.1)
@@ -186,6 +194,36 @@ class Hub:
 
     def current_gen(self, room_id: str) -> int:
         return self.gen.get(room_id, 0)
+
+    def lock(self, room_id: str) -> asyncio.Lock:
+        """방별 잠금 (FIFO). 이벤트 루프가 바뀌면(테스트·재시작) 새로 만든다."""
+        loop = asyncio.get_running_loop()
+        if self._lock_loops.get(room_id) is not loop or room_id not in self.locks:
+            self.locks[room_id] = asyncio.Lock()
+            self._lock_loops[room_id] = loop
+        return self.locks[room_id]
+
+    def spawn(self, room_id: str, coro) -> asyncio.Task:
+        """세대 번호로 취소되지 않는 방별 작업. 참조를 들고 있다가 끝나면 지우고, 새어 나온 예외는 로그로 남긴다."""
+        task = asyncio.create_task(coro)
+        tasks = self.bg.setdefault(room_id, set())
+        tasks.add(task)
+        task.add_done_callback(lambda t: _task_done(tasks, t))
+        return task
+
+
+def _has_loop() -> bool:
+    try:
+        asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False
+
+
+def _task_done(tasks: set, t: asyncio.Task) -> None:
+    tasks.discard(t)
+    if not t.cancelled() and t.exception() is not None:
+        log.error("background task failed", exc_info=t.exception())
 
 
 hub = Hub()

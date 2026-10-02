@@ -19,22 +19,22 @@ export const S3Proxy: React.FC = () => {
       <Stage>
         <Caption step="03" text={CAPTIONS.s3} />
         <BrowserFrame>
-          <Sidebar awayAt={12} />
+          <Sidebar awayAt={10} />
           <ChatStack>
-            <ChatHeader title={ROOM.issues[0]} right={frame > 24 ? <ModeChip /> : null} />
-            <ChatMessage who="jongwon" kind="human" at={38} h={170}>
+            <ChatHeader title={ROOM.issues[0]} right={frame > 20 ? <ModeChip /> : null} />
+            <ChatMessage who="jongwon" kind="human" at={28} h={170}>
               {CHAT.jongwonA}
             </ChatMessage>
             <ChatMessage
               who="hyejung"
               kind="mini"
-              at={86}
+              at={64}
               h={226}
-              side={<GateMeter at={92} value={0.82} color={hj} />}
-              below={<SourceChip at={132} color={hj}>보고서 2문단 · 만족도 조사</SourceChip>}
+              side={<GateMeter at={70} value={0.82} color={hj} />}
+              below={<SourceChip at={104} color={hj}>보고서 2문단 · 만족도 조사</SourceChip>}
             >
               {CHAT.hyejungMiniLead}
-              <Evidence color={hj} progress={prog(frame, 106, 26)}>
+              <Evidence color={hj} progress={prog(frame, 82, 22)}>
                 {CHAT.hyejungMiniEvidence}
               </Evidence>
               {CHAT.hyejungMiniTail}
@@ -42,27 +42,23 @@ export const S3Proxy: React.FC = () => {
             <ChatMessage
               who="dongjun"
               kind="mini"
-              at={156}
+              at={128}
               h={226}
               threaded
-              side={<GateMeter at={162} value={0.71} color={dj} />}
-              below={<SourceChip at={196} color={dj}>보고서 2·3문단 · 예상 반론</SourceChip>}
+              side={<GateMeter at={134} value={0.71} color={dj} />}
+              below={<SourceChip at={166} color={dj}>보고서 2·3문단 · 예상 반론</SourceChip>}
             >
               {CHAT.dongjunMiniLead}
-              <Evidence color={dj} progress={prog(frame, 174, 24)}>
+              <Evidence color={dj} progress={prog(frame, 144, 22)}>
                 {CHAT.dongjunMiniEvidence}
               </Evidence>
             </ChatMessage>
           </ChatStack>
         </BrowserFrame>
       </Stage>
-      <Sfx at={12} name="toggle" volume={0.6} />
-      <Sfx at={20} name="toggle" volume={0.6} />
-      <Sfx at={38} name="pop" volume={0.55} />
-      <Sfx at={86} name="pop" volume={0.55} />
-      <Sfx at={132} name="select" volume={0.5} />
-      <Sfx at={156} name="pop" volume={0.55} />
-      <Sfx at={196} name="select" volume={0.5} />
+      <Sfx at={10} name="toggle" volume={0.45} />
+      <Sfx at={64} name="pop" volume={0.45} />
+      <Sfx at={128} name="pop" volume={0.45} />
     </AbsoluteFill>
   );
 };

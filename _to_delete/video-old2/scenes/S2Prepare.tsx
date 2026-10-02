@@ -5,7 +5,7 @@ import { Avatar, BrowserFrame, Caption, Chip, Cursor, Stage } from "../component
 import { ReadinessRing } from "../components/ReadinessRing";
 import { lin, mix, popIn, prog, typed } from "../anim";
 import { C, SHADOW_SOFT, tint } from "../theme";
-import { Sfx, Typing } from "../components/Sfx";
+import { Sfx } from "../components/Sfx";
 import { ensureFonts } from "../fonts";
 
 ensureFonts();
@@ -56,12 +56,12 @@ export const S2Prepare: React.FC = () => {
   // 타이밍
   const reportIn = popIn(frame, 16, 18);
   const lineStart = [36, 54, 72];
-  const qAt = 104;
-  const aAt = 116;
-  const clickAt = 158;
-  const btnIn = popIn(frame, 140, 12);
+  const qAt = 112;
+  const aAt = 126;
+  const clickAt = 178;
+  const btnIn = popIn(frame, 150, 12);
   const pressed = frame >= clickAt;
-  const ready = mix(lin(frame, 100, 112), 0, 1 / 3) + mix(lin(frame, 166, 184), 0, 2 / 3);
+  const ready = mix(lin(frame, 100, 112), 0, 1 / 3) + mix(lin(frame, 188, 208), 0, 2 / 3);
 
   return (
     <AbsoluteFill>
@@ -274,33 +274,22 @@ export const S2Prepare: React.FC = () => {
                 입장 카드
               </div>
               <StanceCard i={0} at={96} />
-              <StanceCard i={1} at={164} />
-              <StanceCard i={2} at={172} />
+              <StanceCard i={1} at={184} />
+              <StanceCard i={2} at={196} />
             </div>
 
             <Cursor
               path={[
-                { f: 132, x: 1200, y: 740 },
-                { f: 154, x: 690, y: 700 },
+                { f: 150, x: 1200, y: 740 },
+                { f: 172, x: 690, y: 700 },
               ]}
               clickAt={[clickAt]}
             />
           </div>
         </BrowserFrame>
       </Stage>
-      <Sfx at={16} name="pop" volume={0.55} />
-      <Typing start={36} count={18} />
-      <Sfx at={92} name="slide" volume={0.35} />
-      <Sfx at={96} name="pop2" volume={0.55} />
-      <Sfx at={104} name="select" volume={0.5} />
-      <Sfx at={104} name="pop" volume={0.45} />
-      <Typing start={116} count={10} />
-      <Sfx at={140} name="pop2" volume={0.35} />
-      <Sfx at={158} name="click" volume={0.9} />
-      <Sfx at={160} name="confirm" volume={0.5} />
-      <Sfx at={164} name="pop2" volume={0.5} />
-      <Sfx at={172} name="pop2" volume={0.5} />
-      <Sfx at={184} name="confirm" volume={0.6} />
+      <Sfx at={clickAt} name="click" volume={0.8} />
+      <Sfx at={208} name="confirm" volume={0.55} />
     </AbsoluteFill>
   );
 };

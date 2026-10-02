@@ -21,7 +21,7 @@ export const S6Ending: React.FC = () => {
           />
         </AbsoluteFill>
       </Stage>
-      <Sfx at={2} name="chime" volume={0.5} />
+      <Sfx at={2} name="chime" volume={0.45} />
     </AbsoluteFill>
   );
 };

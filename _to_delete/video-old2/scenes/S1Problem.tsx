@@ -68,10 +68,8 @@ export const S1Problem: React.FC = () => {
           })}
         </Interactive.Div>
       </Stage>
-      {[10, 16, 22, 28].map((f) => (
-        <Sfx key={f} at={f} name="pop2" volume={0.5} />
-      ))}
-      <Sfx at={46} name="question" volume={0.45} />
+      <Sfx at={10} name="soft-in" volume={0.4} />
+      <Sfx at={44} name="soft-out" volume={0.4} />
     </AbsoluteFill>
   );
 };

@@ -56,10 +56,7 @@ export const S4Silence: React.FC = () => {
           </ChatStack>
         </BrowserFrame>
       </Stage>
-      <Sfx at={12} name="pop" volume={0.55} />
-      <Sfx at={44} name="pop" volume={0.55} />
-      <Sfx at={66} name="select" volume={0.45} />
-      <Sfx at={76} name="question" volume={0.5} />
+      <Sfx at={76} name="question" volume={0.45} />
     </AbsoluteFill>
   );
 };

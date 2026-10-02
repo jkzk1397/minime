@@ -163,13 +163,8 @@ export const S5Verify: React.FC = () => {
           </Sequence>
         </BrowserFrame>
       </Stage>
-      <Sfx at={10} name="pop" volume={0.55} />
-      <Sfx at={38} name="stamp" volume={0.6} />
-      <Sfx at={60} name="slide" volume={0.5} />
-      {[80, 94, 108, 122].map((f) => (
-        <Sfx key={f} at={f} name="select" volume={0.45} />
-      ))}
-      <Sfx at={RETURN_AT - 4} name="whoosh" volume={0.4} />
+      <Sfx at={38} name="stamp" volume={0.5} />
+      <Sfx at={60} name="slide" volume={0.35} />
     </AbsoluteFill>
   );
 };

@@ -206,12 +206,9 @@ export const ReturnContent: React.FC = () => {
               clickAt={[approveAt, objectAt]}
             />
           </div>
-      <Sfx at={4} name="pop" volume={0.5} />
-      <Sfx at={30} name="pop" volume={0.5} />
-      <Sfx at={approveAt} name="click" volume={0.9} />
-      <Sfx at={approveAt + 1} name="confirm" volume={0.55} />
-      <Sfx at={objectAt} name="click" volume={0.9} />
-      <Sfx at={objectAt + 1} name="stamp" volume={0.45} />
+      <Sfx at={approveAt} name="click" volume={0.7} />
+      <Sfx at={approveAt + 1} name="confirm" volume={0.45} />
+      <Sfx at={objectAt} name="click" volume={0.7} />
     </AbsoluteFill>
   );
 };

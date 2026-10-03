@@ -17,14 +17,14 @@ export const EvidenceLine: React.FC<{ color: string; progress: number; children:
   progress,
   children,
 }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, fontSize: 38, fontWeight: 700, color }}>
-    <DocIcon size={38} color={color} lines={3} highlight={1} />
+  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10, fontSize: 30, fontWeight: 600, color }}>
+    <DocIcon size={30} color={color} lines={3} highlight={1} />
     <span
       style={{
         backgroundImage: `linear-gradient(${tint(color, 45)}, ${tint(color, 45)})`,
         backgroundRepeat: "no-repeat",
         backgroundPosition: "0 100%",
-        backgroundSize: `${progress * 100}% 7px`,
+        backgroundSize: `${progress * 100}% 6px`,
         paddingBottom: 4,
       }}
     >
@@ -33,34 +33,43 @@ export const EvidenceLine: React.FC<{ color: string; progress: number; children:
   </div>
 );
 
-// 한 가지 사례만: 종원이 A안을 꺼내자, 혜중의 미니미가 보고서 근거로 답한다
 export const S2Proxy: React.FC = () => {
   const frame = useCurrentFrame();
+  const hj = PEOPLE.hyejung.color;
+  const dj = PEOPLE.dongjun.color;
   return (
     <AbsoluteFill>
       <Stage>
         <Caption step="02" text={CAPTIONS.proxy} />
         <MeetingTable
           seats={{ jongwon: "person", hyejung: "minime", jungmin: "person", dongjun: "minime" }}
-          at={{ jongwon: 4, hyejung: 8, jungmin: 12, dongjun: 16 }}
+          at={{ jongwon: 6, hyejung: 14, jungmin: 22, dongjun: 30 }}
         />
-        <Bubble who="jongwon" at={26} tail="bottom-right" size={44} style={{ right: 1920 - 650, top: 290 }}>
+        <Bubble who="jongwon" at={44} tail="bottom-right" style={{ right: 1920 - 650, top: 300 }}>
           {LINES.jongwon}
         </Bubble>
-        <Bubble who="hyejung" mini at={62} tail="bottom-left" size={44} style={{ left: 1260, top: 240 }}>
+        <Bubble who="hyejung" mini at={80} tail="bottom-left" style={{ left: 1260, top: 250 }}>
           {LINES.hyejungMini}
-          <EvidenceLine color={PEOPLE.hyejung.color} progress={prog(frame, 80, 22)}>
+          <EvidenceLine color={hj} progress={prog(frame, 94, 20)}>
             {LINES.hyejungEvidence}
+          </EvidenceLine>
+        </Bubble>
+        <Bubble who="dongjun" mini at={130} tail="top-left" style={{ left: 1270, top: 760 }}>
+          {LINES.dongjunMini}
+          <EvidenceLine color={dj} progress={prog(frame, 144, 20)}>
+            {LINES.dongjunEvidence}
           </EvidenceLine>
         </Bubble>
       </Stage>
 
-      {[4, 8, 12, 16].map((f) => (
-        <Sfx key={f} at={f} name="soft-pop" volume={0.3} />
+      {[6, 14, 22, 30].map((f) => (
+        <Sfx key={f} at={f} name="soft-pop" volume={0.35} />
       ))}
-      <Sfx at={26} name="pop" volume={0.4} />
-      <Sfx at={62} name="pop" volume={0.45} />
-      <Sfx at={82} name="select" volume={0.45} />
+      <Sfx at={44} name="pop" volume={0.4} />
+      <Sfx at={80} name="pop" volume={0.45} />
+      <Sfx at={100} name="select" volume={0.4} />
+      <Sfx at={130} name="pop" volume={0.45} />
+      <Sfx at={150} name="select" volume={0.4} />
     </AbsoluteFill>
   );
 };

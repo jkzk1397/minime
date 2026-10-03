@@ -673,3 +673,13 @@ details.more{margin-top:8px;padding-top:6px;border-top:1px dashed var(--line-2)}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .cite-wrap{white-space:nowrap}
+
+/* 실전 시연 자동 진행 줄 (app/autoplay.py) */
+.auto-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 16px 0;padding:6px 14px;border-radius:12px;background:var(--accent-soft);color:var(--ink-2);font-size:12.5px}
+.auto-bar b{color:var(--ink);font-weight:600}
+.auto-bar .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 160px}
+.auto-bar .left{color:var(--muted);font-variant-numeric:tabular-nums}
+.auto-bar .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.auto-bar .dot.paused{background:var(--warn)}
+.auto-bar .dot.done{background:var(--muted)}
+.auto-bar .dot.error{background:var(--bad)}

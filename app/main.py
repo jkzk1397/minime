@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import io
 import logging
 import os
@@ -19,7 +20,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import config, demo, interview, llm, minutes, nli, orchestrator, persona, retrieval, seed
+from . import autoplay, config, demo, interview, llm, minutes, nli, orchestrator, persona, retrieval, seed
 from .models import Stance, new_id
 from .store import ROOM_RE, UID_RE, add_persona, hub
 
@@ -81,7 +82,7 @@ async def lifespan(app: FastAPI):
     if {"minsu", "jihyun", "haeun"} & set(hub.room("demo").personas):     # 예전 이름으로 저장된 시연 방
         hub.replace(seed.fresh_room("demo"))
     base = config.PUBLIC_URL or f"http://{_lan_ip()}:{os.getenv('PORT', '8000')}"
-    log.warning("팀원 접속 주소: %s/?room=demo  (같은 와이파이에서 휴대폰·노트북으로 접속)", base)
+    log.warning("팀원 접속 주소: %s/?room=live  (같은 와이파이에서 휴대폰·노트북으로 접속)", base)
     yield
     probe.cancel()
     hub.save_all()
@@ -151,8 +152,23 @@ class RoomIn(BaseModel):
     seed: bool | str = False          # True: 시연 시나리오 · "live": 실전 시연(동준만 비우고 나머지 자료 채움)
 
 
+_LOCAL_HOSTS = ("127.0.0.1", "::1", "localhost", "testclient")
+
+
+def _admin(request: Request, allow_local: bool = False) -> None:
+    """방 관리 비밀번호 확인 (헤더 X-Admin-Password). allow_local이면 서버 노트북에서 보낸 요청은 비밀번호 없이 허용."""
+    given = request.headers.get("x-admin-password", "")
+    if given and hmac.compare_digest(given.encode(), config.ADMIN_PASSWORD.encode()):
+        return
+    if allow_local and not given and request.client and request.client.host in _LOCAL_HOSTS:
+        return
+    raise HTTPException(401, "비밀번호가 맞지 않아요.")
+
+
 @app.get("/api/rooms")
-def rooms():
+def rooms(request: Request):
+    """방 목록 (방 관리 화면). 방 코드가 다 보이므로 비밀번호가 필요하다."""
+    _admin(request)
     return hub.list_rooms()
 
 
@@ -163,6 +179,7 @@ async def create_room(body: RoomIn):
     if hub.exists(body.room_id):
         raise HTTPException(409, "이미 있는 방 코드예요.")
     room = hub.room(body.room_id)
+    autoplay.stop(body.room_id, clear=True)
     if body.seed == "live":
         seed.seed_live_room(room)
     elif body.seed:
@@ -186,8 +203,10 @@ class ResetIn(BaseModel):
 
 
 @app.post("/api/rooms/{room_id}/reset")
-async def reset_room(room_id: str, body: ResetIn):
+async def reset_room(room_id: str, body: ResetIn, request: Request):
+    _admin(request, allow_local=True)
     old = _room(room_id)
+    autoplay.stop(room_id, clear=True)
     demo.stop(room_id)
     if body.seed:
         fresh = seed.fresh_room(room_id)
@@ -226,12 +245,24 @@ async def delete_room(room_id: str, request: Request):
     아무나 지우지 못하게 서버를 띄운 노트북에서 보낸 요청만 받는다."""
     if not ROOM_RE.match(room_id):
         raise HTTPException(400, "방 코드는 영문·숫자·-·_ 32자 이내예요.")
-    host = request.client.host if request.client else ""
-    if host not in ("127.0.0.1", "::1", "localhost", "testclient"):
-        raise HTTPException(403, "방 삭제는 서버를 띄운 노트북에서만 할 수 있어요.")
+    _admin(request, allow_local=True)                  # 서버 노트북(reset_live.bat)이거나 방 관리 비밀번호
     demo.stop(room_id)
+    autoplay.stop(room_id, clear=True)
     existed = await hub.delete(room_id)
     return {"ok": True, "deleted": existed}
+
+
+class AutoplayIn(BaseModel):
+    action: str                        # next | pause | resume | stop
+
+
+@app.post("/api/rooms/{room_id}/autoplay")
+async def autoplay_control(room_id: str, body: AutoplayIn):
+    """실전 시연 자동 진행 조절: 설명이 빨리 끝나면 [바로 다음], 더 필요하면 [멈춤]."""
+    _room(room_id)
+    if body.action not in ("next", "pause", "resume", "stop"):
+        raise HTTPException(400, "next · pause · resume · stop 중 하나예요.")
+    return await autoplay.control(room_id, body.action)
 
 
 @app.get("/api/rooms/{room_id}/invite")
@@ -625,6 +656,8 @@ async def ws_room(ws: WebSocket, room_id: str, uid: str):
                             "drift": room.drift[-80:], "gate": room.gate_log[-1] if room.gate_log else None})
         await ws.send_json(llm.status())
         await ws.send_json(demo.snapshot(room_id))
+        if autoplay.is_live_room(room):
+            await ws.send_json(autoplay.snapshot(room_id))
         await orchestrator.broadcast_members(room_id)
         while True:
             ev = await ws.receive_json()

@@ -180,6 +180,10 @@ async def handle_human(room_id: str, uid: str, text: str, meta: dict | None = No
         if meeting_closed(room_id):                      # 회의가 끝난 뒤 잡담: 회의를 다시 열거나 회의록을 지우지 않는다
             msg = Message("human", text, uid, meta={**(meta or {}), "after_end": True})
             await hub.post(room_id, msg)
+            if (called or room.absent()) and not room.meeting.get("closed_hint"):
+                room.meeting["closed_hint"] = True            # 끝난 회의에서 미니미가 왜 조용한지 한 번 알려 준다
+                await system(room_id, "회의가 끝나서 미니미는 대신 말하지 않아요. 위 ⋯ → '새 회의 시작'을 누르면 다시 참여해요.",
+                             event="closed_hint")
             return msg, asyncio.create_task(_noop())
         if room.meeting.get("status") != "live":
             await start_meeting(room_id)
@@ -206,6 +210,7 @@ async def handle_human(room_id: str, uid: str, text: str, meta: dict | None = No
         if ko.decision_sentence(text, lambda s: bool(agenda.detect_position(issue, s))):
             decision = await minutes.record(room, msg, issue_id)
         await hub.post(room_id, msg)
+        await _present_owner_hint(room, room_id, text, uid)
         await hub.broadcast(room_id, {"type": "drift", **point, "threshold": config.DRIFT_THRESHOLD})
         if decision:
             await post_decision(room_id, decision)
@@ -218,6 +223,21 @@ async def handle_human(room_id: str, uid: str, text: str, meta: dict | None = No
         if gen == hub.current_gen(room_id):              # 그 사이 새 발언이 왔으면 등록하지 않는다 (작업은 바로 끝난다)
             hub.tasks[room_id] = task
     return msg, task
+
+
+_owner_hint_at: dict[tuple[str, str], float] = {}
+
+
+async def _present_owner_hint(room: Room, room_id: str, text: str, uid: str) -> None:
+    """'동준 미니미, …'처럼 미니미를 불렀는데 주인이 자리에 있으면, 왜 미니미가 답하지 않는지 알려 준다 (1분에 한 번)."""
+    names = {u: p.name for u, p in room.personas.items()}
+    for u in ko.addressed_mini(text, names):
+        p = room.personas.get(u)
+        if u == uid or not p or p.mini_on or time.time() - _owner_hint_at.get((room_id, u), 0) < 60:
+            continue
+        _owner_hint_at[(room_id, u)] = time.time()
+        await system(room_id, f"{p.name} 님이 지금 자리에 있어서 미니미는 대신 답하지 않아요. "
+                              f"{p.name} 님이 '자리 비움'을 켜면 미니미가 대신 답해요.", event="owner_present", uid=u)
 
 
 async def post_decision(room_id: str, d) -> None:
@@ -361,8 +381,14 @@ async def set_away(room_id: str, uid: str, on: bool, wait_digest: bool = True) -
         await system(room_id, f"{p.name} 님이 불참해요. {p.name} 님의 미니미가 대리 참석합니다{warn}.",
                      event="away", uid=uid)
         await broadcast_members(room_id)
+        from . import autoplay                              # 실전 시연 방: 발표자가 빠지면 대본 자동 진행
+        if uid == autoplay.PRESENTER:
+            autoplay.maybe_start(room_id)
         return None
     missed = room.messages[p.away_marker:]
+    from . import autoplay
+    if uid == autoplay.PRESENTER:
+        await autoplay.presenter_back(room_id)
     await system(room_id, f"{p.name} 님이 돌아왔어요. 미니미 대리 참석을 끕니다.", event="back", uid=uid)
     if not wait_digest:
         hub.spawn(room_id, _send_digest(room_id, uid, missed))

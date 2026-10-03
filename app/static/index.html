@@ -93,8 +93,7 @@
         <label class="field"><span>오늘 안건</span><input name="agenda" id="newRoomAgenda" placeholder="정책 제안 발표 준비" maxlength="120"></label>
         <label class="field"><span>쟁점 <small>한 줄에 하나 · 선택지는 '쟁점: A안, B안'</small></span>
           <textarea name="issues" id="newRoomIssues" rows="3" placeholder="제안할 예산안: A안, B안&#10;자료 조사 방법: 설문, 타 대학 사례&#10;발표 역할과 리허설"></textarea></label>
-        <label class="check"><input type="checkbox" name="seed" id="newRoomSeed"> 시연용 '스피치와 토론' 시나리오로 채우기</label>
-        <label class="check"><input type="checkbox" name="seed_live" id="newRoomSeedLive"> 실전 시연용: 종원·혜중·정민 자료 채우고 동준만 비워 두기</label>
+        <label class="check"><input type="checkbox" name="seed_live" id="newRoomSeedLive"> 시연용: 종원·혜중·정민 자료 채우고 동준만 비워 두기</label>
         <button class="btn primary" type="submit">방 만들기</button>
       </form>
     </details>
@@ -151,6 +150,7 @@
         </div>
       </div>
     </header>
+    <div class="auto-bar" id="autoBar" hidden></div>
     <div class="conn-banner" id="connBanner" hidden>연결이 끊겼어요. 다시 연결하는 중…</div>
     <div class="feed" id="feed" aria-live="polite"></div>
     <div class="typing" id="typing"></div>

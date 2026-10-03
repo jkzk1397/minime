@@ -37,20 +37,21 @@ export const S4Verify: React.FC = () => {
               boxShadow: `inset 0 0 0 3px ${C.line2}, 0 30px 50px -30px rgba(40,30,80,.4)`,
               display: "flex",
               alignItems: "center",
-              gap: 40,
-              padding: "0 56px",
+              gap: 36,
+              padding: "0 50px",
               position: "relative",
+              overflow: "visible",
             }}
           >
-            <Person who="jungmin" size={150} />
+            <Person who="jungmin" size={180} style={{ marginTop: 20 }} />
             <div style={{ fontSize: 76, fontWeight: 700, letterSpacing: "-0.04em" }}>{LINES.decision}</div>
 
             {/* 보류 도장 */}
             <div
               style={{
                 position: "absolute",
-                right: -40,
-                top: -50,
+                right: -130,
+                top: -80,
                 opacity: Math.min(1, stamp * 2),
                 scale: `${mix(stamp, 2.4, 1)}`,
                 rotate: "-12deg",

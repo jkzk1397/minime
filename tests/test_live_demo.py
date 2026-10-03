@@ -116,5 +116,96 @@ def test_delete_room_only_from_server_laptop():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("192.168.0.7", 5000)),
                                      base_url="http://t") as c:
             r = await c.delete("/api/rooms/anything")
-            assert r.status_code == 403
+            assert r.status_code == 401
+    asyncio.run(go())
+
+
+async def _autoplay_flow():
+    """동준이 대리 참석을 켜면 종원·정민의 대사 · 2차 검증 · 역할 결정 · 회의 종료가 대본 순서대로 자동 진행된다."""
+    from app import autoplay
+    autoplay.SPEED, autoplay.START_DELAY = 0.01, 0.01
+    rid = "live-auto"
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+        await c.delete(f"/api/rooms/{rid}")
+        assert (await c.post("/api/rooms", json={"room_id": rid, "seed": "live"})).status_code == 200
+        room = hub.room(rid)
+        base = f"/api/rooms/{rid}/members/dj"
+        ex = (await c.get(base)).json()["example"]
+        await c.post(base + "/reports", json={"title": ex["report_title"], "text": ex["report_text"]})
+        for q in (await c.post(base + "/interview/plan")).json()["questions"]:
+            st = (await c.post(base + f"/interview/{q['id']}/answer", json={"text": ex["answers"][q["issue_id"]]})).json()["stance"]
+            await c.post(base + f"/stances/{st['id']}/confirm", json={"ok": True})
+
+        await orchestrator.set_away(rid, "jm", True)            # 발표자가 아닌 사람은 자동 진행을 켜지 않는다
+        assert autoplay.snapshot(rid)["status"] == "idle"
+        await orchestrator.set_away(rid, "jm", False)
+
+        await orchestrator.set_away(rid, "dj", True)
+        await asyncio.wait_for(autoplay._tasks[rid], timeout=60)
+        assert autoplay.snapshot(rid)["status"] == "done"
+        kinds = [(m.kind, m.user_id, (m.meta or {}).get("act") or (m.meta or {}).get("abstain") or "") for m in room.messages
+                 if m.kind in ("mini", "decision", "verify", "result")]
+        assert kinds[0] == ("mini", "dj", "rebuttal") and kinds[1] == ("mini", "dj", "no_evidence")
+        assert [k[0] for k in kinds[2:]] == ["decision", "verify", "decision"]
+        assert room.meeting.get("status") != "ended"          # 회의 종료는 마지막에 직접 (남는 시간에 기능을 더 보여 주도록)
+
+        await orchestrator.set_away(rid, "dj", True)             # 한 번 끝난 방에서는 다시 돌지 않는다
+        assert autoplay.snapshot(rid)["status"] == "done"
+        r = await c.post(f"/api/rooms/{rid}/autoplay", json={"action": "next"})
+        assert r.status_code == 200
+        await c.delete(f"/api/rooms/{rid}")
+        assert autoplay.snapshot(rid)["status"] == "idle"
+
+
+def test_autoplay_runs_script_after_presenter_leaves():
+    asyncio.run(_autoplay_flow())
+
+
+def test_silent_mini_explains_why():
+    """미니미를 불렀는데 답이 없을 때 이유를 알려 준다: 주인이 자리에 있음 / 회의가 끝남."""
+    async def go():
+        rid = "live-hint"
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+            await c.delete(f"/api/rooms/{rid}")
+            await c.post("/api/rooms", json={"room_id": rid, "seed": "live"})
+        room = hub.room(rid)
+
+        async def ask(text):
+            n = len(room.messages)
+            _, t = await orchestrator.handle_human(rid, "jm", text)
+            await t
+            return [m for m in room.messages[n:] if m.kind != "human"]
+
+        out = await ask("혜중 미니미, 만족도 조사 결과 알려 줘")
+        assert any(m.kind == "system" and "자리에 있어서" in m.text for m in out)
+        assert not any(m.kind == "mini" for m in out)
+        await orchestrator.set_away(rid, "hj", True)
+        assert any(m.kind == "mini" for m in await ask("혜중 미니미, 만족도 조사 결과 알려 줘"))
+        await orchestrator.end_meeting(rid)
+        out = await ask("혜중 미니미, 만족도 조사 결과 알려 줘")
+        assert any(m.kind == "system" and "새 회의 시작" in m.text for m in out)
+        await orchestrator.start_meeting(rid)
+        assert any(m.kind == "mini" for m in await ask("혜중 미니미, 만족도 조사 결과 알려 줘"))
+    asyncio.run(go())
+
+
+
+def test_room_admin_with_password():
+    """방 관리: 목록·대화 초기화·삭제는 비밀번호(기본 0301)가 있어야 한다. 다른 기기에서도 비밀번호면 된다."""
+    async def go():
+        remote = httpx.ASGITransport(app=app, client=("192.168.0.9", 5000))
+        async with httpx.AsyncClient(transport=remote, base_url="http://t") as c:
+            await c.post("/api/rooms", json={"room_id": "adm-1", "seed": "live"})
+            assert (await c.get("/api/rooms")).status_code == 401
+            assert (await c.get("/api/rooms", headers={"X-Admin-Password": "1234"})).status_code == 401
+            ok = {"X-Admin-Password": "0301"}
+            rooms = (await c.get("/api/rooms", headers=ok)).json()
+            row = next(r for r in rooms if r["room_id"] == "adm-1")
+            assert row["members"] == 4 and row["names"] == ["종원", "혜중", "정민", "동준"]
+            await orchestrator.handle_human("adm-1", "jw", "안녕")
+            assert (await c.post("/api/rooms/adm-1/reset", json={"seed": False})).status_code == 401
+            assert (await c.post("/api/rooms/adm-1/reset", json={"seed": False}, headers=ok)).json()["ok"]
+            assert not hub.room("adm-1").messages and len(hub.room("adm-1").personas) == 4
+            assert (await c.delete("/api/rooms/adm-1", headers=ok)).json()["deleted"] is True
+            assert all(r["room_id"] != "adm-1" for r in (await c.get("/api/rooms", headers=ok)).json())
     asyncio.run(go())

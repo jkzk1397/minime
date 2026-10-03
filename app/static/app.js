@@ -50,6 +50,13 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경 */ } },
     del(k) { try { localStorage.removeItem(k); } catch { /* */ } },
   };
+  // 접속한 자리는 탭마다 따로 기억한다 (같은 PC에서 탭 여러 개로 여러 사람이 접속해도 섞이지 않게).
+  // 새로고침해도 그 탭의 자리는 유지되고, 새 탭은 자리 고르기부터 시작한다.
+  const tabStore = {
+    get(k, d = null) { try { const v = sessionStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* 저장 불가 환경 */ } },
+    del(k) { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch { /* */ } },
+  };
   function toast(text, kind = '') {
     const t = h('div', { class: `toast ${kind}`, role: 'status', text });
     $('#toasts').append(t);
@@ -125,9 +132,9 @@
     bindStatic();
     const qs = new URLSearchParams(location.search);
     const roomQ = qs.get('room');
-    const sess = store.get('minime.session');
+    const sess = tabStore.get('minime.session');
     if (sess && (!roomQ || roomQ === sess.room) && !qs.has('lobby')) join(sess.room, sess.uid, sess.observer);
-    else showLobby(roomQ || (sess && sess.room) || 'demo');
+    else showLobby(roomQ || (sess && sess.room) || '');      // 기본 방 없음: 방 코드를 직접 넣거나 새로 만든다
   }
 
   // ================================================================ 로비
@@ -136,6 +143,7 @@
     $('#app').hidden = true;
     $('#demoPanel').hidden = true;
     $('#lobby').hidden = false;
+    renderAutoplay(null);
     document.title = 'MINIME';
     if (roomId) { $('#roomInput').value = roomId; loadLobbyRoom(roomId); }
   }
@@ -177,7 +185,7 @@
   function join(roomId, uid, observer) {
     S.roomId = roomId; S.me = observer ? null : uid; S.observer = !!observer;
     S.messages = []; S.msgEls.clear(); S.gateByMsg.clear(); S.gate = null; S.selGate = null; S.drift = [];
-    store.set('minime.session', { room: roomId, uid, observer: !!observer });
+    tabStore.set('minime.session', { room: roomId, uid, observer: !!observer });
     const url = new URL(location.href);
     url.searchParams.set('room', roomId); url.searchParams.delete('lobby');
     history.replaceState(null, '', url);
@@ -185,7 +193,8 @@
     $('#app').hidden = false;
     fill($('#feed'));
     renderComposerState();
-    if (observer && roomId === 'demo') openDemoPanel();   // 실전 방의 발표 화면엔 시연 가이드를 띄우지 않는다
+    $('#demoBtn').hidden = roomId !== 'demo';              // 시연 가이드는 예전 demo 방에서만 (실전 방에는 없음)
+    if (observer && roomId === 'demo') openDemoPanel();
     connect();
   }
   function wsUrl() {
@@ -208,7 +217,7 @@
     ws.onclose = ev => {
       clearInterval(S.pingT);
       if (S.ws !== ws || S.closedByUser) return;
-      if (ev.code === 4404) { store.del('minime.session'); toast('방에 없는 팀원이거나 방이 바뀌었어요. 자리를 다시 골라 주세요.', 'bad'); showLobby(S.roomId); return; }
+      if (ev.code === 4404) { tabStore.del('minime.session'); toast('방에 없는 팀원이거나 방이 바뀌었어요. 자리를 다시 골라 주세요.', 'bad'); showLobby(S.roomId); return; }
       $('#connBanner').hidden = false;
       const wait = Math.min(8000, 600 * 2 ** S.retry++);
       setTimeout(() => { if (S.ws === ws) connect(); }, wait);
@@ -255,6 +264,7 @@
         }
         break;
       case 'demo': S.demo = d; onDemo(d); break;
+      case 'autoplay': renderAutoplay(d); break;
       case 'reset':
         S.messages = []; S.msgEls.clear(); S.gate = null; S.gateByMsg.clear(); S.drift = [];
         renderFeed(); renderDash(); closeModal();
@@ -856,6 +866,34 @@
   function closeSheet() { $('#sheet').hidden = true; S.prep = null; dockDemo(); }
 
   // ================================================================ 시연 가이드
+  // ---------------------------------------------------------------- 실전 시연 자동 진행 (app/autoplay.py)
+  let autoTimer = null;
+  function renderAutoplay(d) {
+    const bar = $('#autoBar');
+    S.autoplay = d;
+    clearInterval(autoTimer);
+    if (!d || !d.status || d.status === 'idle') { bar.hidden = true; return; }
+    const skew = (d.now || Date.now() / 1000) - Date.now() / 1000;
+    const ctl = (action, label) => h('button', { class: 'text-btn', type: 'button',
+      on: { click: async () => { try { renderAutoplay(await api('POST', `/api/rooms/${encodeURIComponent(S.roomId)}/autoplay`, { action })); } catch (e) { toast(e.message, 'bad'); } } } }, label);
+    const left = h('span', { class: 'left' });
+    const paint = () => {
+      const remain = d.until ? Math.max(0, Math.ceil(d.until - (Date.now() / 1000 + skew))) : 0;
+      left.textContent = d.status === 'paused' ? '멈춤' : (d.next_label && remain ? `다음: ${d.next_label} · ${remain}초` : '');
+    };
+    const running = d.status === 'running' || d.status === 'paused';
+    fill(bar,
+      h('span', { class: `dot ${d.status}` }),
+      h('b', { text: running ? `자동 진행 ${d.step || 0}/${d.total}` : '자동 진행' }),
+      h('span', { class: 'lbl', text: d.label || '' }),
+      left,
+      running ? ctl('next', '바로 다음') : null,
+      running ? (d.status === 'paused' ? ctl('resume', '이어서') : ctl('pause', '멈춤')) : null);
+    bar.hidden = false;
+    paint();
+    if (running) autoTimer = setInterval(paint, 500);
+  }
+
   function openDemoPanel() {
     $('#demoPanel').hidden = false;
     $('#demoPanel').classList.remove('min');
@@ -946,7 +984,7 @@
   function scrim(on) { $('#scrim').hidden = !on; $('#scrim').classList.toggle('on', on); }
   function setNav(k) { $$('#bottomNav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.nav === k))); }
   function leave() {
-    store.del('minime.session');
+    tabStore.del('minime.session');
     const url = new URL(location.href); url.searchParams.set('lobby', '1'); history.replaceState(null, '', url);
     showLobby(S.roomId);
   }
@@ -974,7 +1012,7 @@
         return { title: t.trim(), options: opts ? opts.split(/[,，/]/).map(s => s.trim()).filter(Boolean) : [] };
       });
       try {
-        await api('POST', '/api/rooms', { room_id: f.room_id.value.trim(), title: f.title.value, agenda: f.agenda.value, issues, seed: f.seed_live.checked ? 'live' : f.seed.checked });
+        await api('POST', '/api/rooms', { room_id: f.room_id.value.trim(), title: f.title.value, agenda: f.agenda.value, issues, seed: f.seed_live.checked ? 'live' : false });
         const id = f.room_id.value.trim();
         $('#roomInput').value = id; loadLobbyRoom(id); f.reset(); f.closest('details').open = false;
         toast('방을 만들었어요. 자리를 고르거나 새 팀원으로 들어오세요.');

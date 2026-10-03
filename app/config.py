@@ -89,3 +89,4 @@ SHORT_TERM_N = int(_f("SHORT_TERM_N", 24))
 PUBLIC_URL = os.getenv("PUBLIC_URL", "").rstrip("/")   # QR 초대 링크에 쓸 주소 (비우면 자동)
 ALLOW_ORIGINS = [x.strip() for x in os.getenv("ALLOW_ORIGINS", "*").split(",") if x.strip()]
 MAX_MEMBERS = int(_f("MAX_MEMBERS", 8))
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "0301")   # 방 관리(목록·초기화·삭제) 비밀번호

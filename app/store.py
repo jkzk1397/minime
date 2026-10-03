@@ -136,8 +136,13 @@ class Hub:
         out = []
         for rid in sorted(ids):
             r = self.room(rid)
+            last = r.messages[-1].ts if r.messages else (self.path(rid).stat().st_mtime if self.path(rid).exists() else 0)
             out.append({"room_id": rid, "title": r.title, "agenda": r.agenda, "members": len(r.personas),
-                        "online": len(self.online(rid)), "status": r.meeting.get("status", "idle")})
+                        "names": [p.name for p in r.personas.values()], "away": [p.name for p in r.personas.values() if p.mini_on],
+                        "online": len(self.online(rid)), "observers": self.observers(rid),
+                        "messages": sum(1 for m in r.messages if m.kind in ("human", "mini")),
+                        "decisions": len(r.decisions), "status": r.meeting.get("status", "idle"), "last_ts": last})
+        out.sort(key=lambda x: -x["last_ts"])
         return out
 
     # ------------------------------------------------------------ 접속

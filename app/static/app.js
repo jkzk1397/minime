@@ -894,6 +894,72 @@
     if (running) autoTimer = setInterval(paint, 500);
   }
 
+  // ---------------------------------------------------------------- 방 관리 (비밀번호: 서버 .env 의 ADMIN_PASSWORD, 기본 0301)
+  async function adminApi(method, path, pw, body) {
+    const opt = { method, headers: { 'X-Admin-Password': pw } };
+    if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    const r = await fetch(path, opt);
+    let data = null;
+    try { data = await r.json(); } catch { /* 본문 없음 */ }
+    if (!r.ok) throw Object.assign(new Error((data && data.detail) || `요청 실패 (${r.status})`), { status: r.status });
+    return data;
+  }
+  const ago = ts => {
+    if (!ts) return '-';
+    const s = Math.max(0, Date.now() / 1000 - ts);
+    return s < 60 ? '방금' : s < 3600 ? `${Math.floor(s / 60)}분 전` : s < 86400 ? `${Math.floor(s / 3600)}시간 전` : `${Math.floor(s / 86400)}일 전`;
+  };
+  const MEETING_KO = { live: '회의 중', ended: '회의 끝', idle: '시작 전' };
+
+  function openAdmin(note = '') {
+    const pw = tabStore.get('minime.admin', '');
+    if (!pw) return adminLogin(note);
+    loadAdmin(pw);
+  }
+  function adminLogin(note = '') {
+    const inp = h('input', { type: 'password', id: 'adminPw', placeholder: '비밀번호', inputmode: 'numeric', autocomplete: 'off' });
+    const go = async () => {
+      try { await adminApi('GET', '/api/rooms', inp.value); tabStore.set('minime.admin', inp.value); loadAdmin(inp.value); }
+      catch (e) { toast(e.message, 'bad'); inp.select(); }
+    };
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) go(); });
+    openModal({ eyebrow: '방 관리', title: '비밀번호를 입력해 주세요', body: [
+      note ? h('p', { class: 'muted sm', text: note }) : null,
+      h('div', { class: 'row-form' }, inp, h('button', { class: 'btn primary', type: 'button', on: { click: go } }, '열기'))] });
+    setTimeout(() => inp.focus(), 50);
+  }
+  async function loadAdmin(pw) {
+    let rooms;
+    try { rooms = await adminApi('GET', '/api/rooms', pw); }
+    catch (e) { tabStore.del('minime.admin'); return adminLogin(e.status === 401 ? '비밀번호가 바뀌었거나 맞지 않아요.' : e.message); }
+    const act = (label, cls, fn) => h('button', { class: `btn xs ${cls}`, type: 'button', on: { click: fn } }, label);
+    const enter = r => () => { closeModal(); $('#roomInput').value = r.room_id; loadLobbyRoom(r.room_id); };
+    const reset = r => () => confirmModal({
+      eyebrow: '대화 초기화', title: `'${r.room_id}' 방의 대화를 지울까요?`,
+      body: '팀원과 보고서·입장 카드, 안건은 그대로 두고 대화·결정·회의록만 지워요. 되돌릴 수 없어요.', ok: '대화 지우기', danger: true,
+      onOk: async () => { try { await adminApi('POST', `/api/rooms/${encodeURIComponent(r.room_id)}/reset`, pw, { seed: false }); toast('대화를 지웠어요.'); } catch (e) { toast(e.message, 'bad'); } loadAdmin(pw); },
+      onCancel: () => loadAdmin(pw) });
+    const remove = r => () => confirmModal({
+      eyebrow: '방 삭제', title: `'${r.room_id}' 방을 삭제할까요?`,
+      body: '팀원·보고서·대화가 모두 지워지고, 접속 중인 화면은 로비로 돌아가요. 되돌릴 수 없어요.', ok: '삭제', danger: true,
+      onOk: async () => { try { await adminApi('DELETE', `/api/rooms/${encodeURIComponent(r.room_id)}`, pw); toast('방을 삭제했어요.'); } catch (e) { toast(e.message, 'bad'); } loadAdmin(pw); },
+      onCancel: () => loadAdmin(pw) });
+    const rows = rooms.map(r => h('tr', {},
+      h('td', {}, h('b', { text: r.room_id }), h('div', { class: 'muted sm', text: r.title || '' })),
+      h('td', {}, h('div', { text: `${r.members}명 · 접속 ${r.online}${r.observers ? ` · 관전 ${r.observers}` : ''}` }),
+        h('div', { class: 'muted sm', text: (r.names || []).join(' · ') + ((r.away || []).length ? ` (자리 비움: ${r.away.join(', ')})` : '') })),
+      h('td', {}, h('div', { text: MEETING_KO[r.status] || r.status }), h('div', { class: 'muted sm', text: `대화 ${r.messages} · 결정 ${r.decisions}` })),
+      h('td', { class: 'muted sm', text: ago(r.last_ts) }),
+      h('td', { class: 'acts' }, act('들어가기', '', enter(r)), act('대화 초기화', 'ghost', reset(r)), act('삭제', 'danger', remove(r)))));
+    openModal({ eyebrow: '방 관리', title: `방 ${rooms.length}개`, wide: true, body: [
+      rooms.length ? h('div', { class: 'admin-table' }, h('table', {},
+        h('thead', {}, h('tr', {}, ['방', '팀원', '상태', '마지막 활동', ''].map(t => h('th', { text: t })))),
+        h('tbody', {}, rows))) : h('p', { class: 'muted', text: '아직 만든 방이 없어요.' }),
+      h('div', { class: 'modal-actions' },
+        h('button', { class: 'btn ghost', type: 'button', on: { click: () => { tabStore.del('minime.admin'); closeModal(); } } }, '잠그기'),
+        h('button', { class: 'btn', type: 'button', on: { click: () => loadAdmin(pw) } }, '새로고침'))] });
+  }
+
   function openDemoPanel() {
     $('#demoPanel').hidden = false;
     $('#demoPanel').classList.remove('min');
@@ -1004,6 +1070,7 @@
       } catch (err) { toast(err.message, 'bad'); }
     });
     $('#observeBtn').addEventListener('click', () => join($('#lobbyRoom').dataset.room, null, true));
+    $('#adminBtn').addEventListener('click', () => openAdmin());
     $('#newRoomForm').addEventListener('submit', async e => {
       e.preventDefault();
       const f = e.currentTarget;

@@ -79,7 +79,7 @@ async def lifespan(app: FastAPI):
     loop.run_in_executor(None, retrieval.warmup)       # 형태소 분석기 첫 호출 지연을 미리
     loop.run_in_executor(None, _nli_warmup, loop)           # 근거 검증 NLI 모델 (없으면 핵심어 검사로 대신)
     probe = asyncio.create_task(_probe_loop())
-    if {"minsu", "jihyun", "haeun"} & set(hub.room("demo").personas):     # 예전 이름으로 저장된 시연 방
+    if hub.path("demo").exists() and {"minsu", "jihyun", "haeun"} & set(hub.room("demo").personas):  # 예전 이름으로 저장된 시연 방 (없으면 만들지 않는다)
         hub.replace(seed.fresh_room("demo"))
     base = config.PUBLIC_URL or f"http://{_lan_ip()}:{os.getenv('PORT', '8000')}"
     log.warning("팀원 접속 주소: %s/?room=live  (같은 와이파이에서 휴대폰·노트북으로 접속)", base)

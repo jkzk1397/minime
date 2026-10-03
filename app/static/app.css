@@ -683,3 +683,12 @@ details.more{margin-top:8px;padding-top:6px;border-top:1px dashed var(--line-2)}
 .auto-bar .dot.paused{background:var(--warn)}
 .auto-bar .dot.done{background:var(--muted)}
 .auto-bar .dot.error{background:var(--bad)}
+
+/* 방 관리 */
+#adminBtn{align-self:flex-start}
+.admin-table{overflow-x:auto;margin:4px 0 12px}
+.admin-table table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+.admin-table th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.admin-table td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.admin-table td.acts{white-space:nowrap;text-align:right}
+.admin-table td.acts .btn{margin-left:4px}

@@ -559,43 +559,43 @@ async def forget_me(room_id: str, uid: str):
 
 # ---------------------------------------------------------------- 개인정보 동의 (10주차 근거 설계 보고서 5-2)
 def _privacy_notice() -> dict:
-    """동의 화면 문구. 보유 기간·외부 전송은 실제 설정에서 읽어 와서 안내와 동작이 어긋나지 않게 한다."""
+    """동의 화면 문구 (짧게). 보유 기간·외부 전송은 실제 설정에서 읽어 와서 안내와 동작이 어긋나지 않게 한다."""
     api_on = "api" in config.LLM_ORDER and bool(config.API_KEY)
     host = re.sub(r"^https?://", "", config.API_BASE).split("/")[0] if api_on else ""
-    keep = (f"마지막 회의 활동 뒤 {config.RETENTION_DAYS}일이 지나면 자동으로 지워요. 그 전에도 '내 기억 삭제'로 바로 지울 수 있어요."
-            if config.RETENTION_DAYS > 0 else
-            "회의방이 삭제되거나 본인이 '내 기억 삭제'를 누를 때까지 보관해요.")
+    keep = (f"마지막 활동 후 {config.RETENTION_DAYS}일 뒤 자동 삭제 · 그 전에도 '내 기억 삭제'로 바로 지울 수 있어요"
+            if config.RETENTION_DAYS > 0 else "회의방을 지우거나 '내 기억 삭제'를 누를 때까지 보관해요")
     outside = []
     if api_on:
-        outside.append(f"AI 답변을 만들 때 회의 대화와 근거 자료 일부가 외부 AI 서비스({host})로 전송될 수 있어요.")
+        outside.append(f"AI 답변을 만들 때 대화와 자료 일부가 외부 AI 서비스({host})로 전송돼요")
     if config.TAVILY_API_KEY:
-        outside.append("2차 검증에서 팀 자료에 근거가 없으면 주장 문장이 웹 검색 서비스(Tavily)로 전송될 수 있어요.")
+        outside.append("2차 검증에서 근거를 못 찾으면 주장 문장이 웹 검색(Tavily)으로 전송돼요")
     if not outside:
-        outside.append("AI 처리는 이 컴퓨터 안에서 이뤄지고, 내용을 외부 AI 서비스로 보내지 않아요.")
+        outside.append("외부 AI 서비스로 보내지 않아요 (이 컴퓨터 안에서 처리)")
     return {
         "version": config.CONSENT_VERSION,
         "items": [
-            {"key": "service", "required": True, "title": "회의 참여를 위한 개인정보 수집·이용",
-             "purpose": "회의방 참여자 구분, 실시간 회의 진행, 회의록 작성",
-             "fields": "이름(닉네임), 팀에서 맡은 일, 회의 중 내가 쓴 메시지, 결정에 남긴 승인·이의",
+            {"key": "service", "required": True, "title": "회의 참여",
+             "purpose": "참여자 구분, 회의 진행, 회의록 작성",
+             "fields": "이름(닉네임), 맡은 일, 내가 쓴 메시지와 승인·이의",
              "keep": keep,
-             "refuse": "동의하지 않으면 회의방에 자리를 잡고 말할 수 없어요. 발표 화면(관전)으로는 볼 수 있어요."},
-            {"key": "use_reports", "required": False, "title": "미니미 근거 자료 수집·이용",
-             "purpose": "자리를 비운 동안 미니미가 내 입장을 근거와 함께 대신 전하기",
-             "fields": "올린 자료(보고서·발표자료·메모), 인터뷰 답, 입장 카드, 채팅에서 가져온 내 말",
+             "refuse": "자리를 잡고 말할 수 없어요 (관전은 가능)"},
+            {"key": "use_reports", "required": False, "title": "미니미 근거 자료",
+             "purpose": "자리를 비운 동안 미니미가 내 입장을 근거와 함께 전하기",
+             "fields": "올린 자료, 인터뷰 답, 입장 카드, 채팅에서 가져온 내 말, 전달 메모",
              "keep": keep,
-             "refuse": "동의하지 않아도 회의에는 참여할 수 있어요. 다만 미니미 대리 참석은 켤 수 없어요."},
+             "refuse": "회의는 참여할 수 있지만 대리 참석은 켤 수 없어요"},
             {"key": "store_utterances", "required": False, "title": "회의 발언으로 입장 변화 찾기",
-             "purpose": "회의가 끝난 뒤 내 발언에서 바뀐 입장 후보를 찾아 다음 회의 준비에 쓰기 (내가 확인해야 쓰임)",
+             "purpose": "회의 뒤 바뀐 입장 후보를 찾아 다음 준비에 쓰기 (내가 확인해야 쓰여요)",
              "fields": "회의 중 내가 쓴 메시지",
              "keep": keep,
-             "refuse": "동의하지 않아도 모든 기능을 쓸 수 있어요. 회의 뒤 입장 변화 후보만 만들지 않아요."},
+             "refuse": "모든 기능을 쓸 수 있어요. 입장 변화 후보만 만들지 않아요"},
         ],
+        "keep": keep,
         "outside": outside,
-        "where": "이 시제품은 서버를 띄운 컴퓨터의 data 폴더에 회의방별로 저장해요.",
-        "rights": "언제든 동의를 바꾸거나 철회할 수 있고, '내 기억 삭제'로 미니미가 기억하는 내용을 모두 지울 수 있어요.",
+        "where": "서버를 띄운 컴퓨터의 data 폴더에 회의방별로 저장",
+        "rights": "동의는 언제든 바꾸거나 철회할 수 있어요",
         "law": ["「개인정보 보호법」 제15조 제2항: 수집·이용 목적, 수집 항목, 보유·이용 기간, 동의 거부 권리와 불이익을 알린다",
-                "「개인정보 보호법」 제22조 제1항: 동의 사항을 구분해 정보주체가 명확히 알 수 있게 알리고 각각 동의를 받는다"],
+                "「개인정보 보호법」 제22조 제1항: 동의 사항을 구분해 명확히 알리고 각각 동의를 받는다"],
         "note": "수업 과제용 시제품의 설계안이에요. 실제 서비스로 운영하려면 운영 정책을 확정하고 법적 검토를 다시 받아야 해요.",
     }
 

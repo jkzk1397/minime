@@ -184,7 +184,8 @@ def casual_to_polite(text: str, keep_proposal: bool = False) -> str:
     if m:
         lead = "네, 맞아요."
         t = t[m.end():]
-    parts = re.split(r"[.!?]\s*|\s+(?=근데\s)|\s*,\s*(?=그리고|근데|다만)", t)
+    # 소수점(4.2점)은 문장 끝이 아니다: 앞뒤가 모두 숫자인 '.'에서는 나누지 않는다
+    parts = re.split(r"(?:(?<!\d)[.!?]|[.!?](?!\d))\s*|\s+(?=근데\s)|\s*,\s*(?=그리고|근데|다만)", t)
     out = []
     for p in parts:
         p = p.strip(" ,")

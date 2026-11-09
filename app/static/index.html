@@ -49,6 +49,12 @@
     <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-hash" viewBox="0 0 24 24"><path d="M9 4 7 20M17 4l-2 16M4.5 9h16M3.5 15h16"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M8.5 9h7M8.5 12h4"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4z"/><path d="M4 8l8 4 8-4M12 12v8"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/></symbol>
     <symbol id="i-mini" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5.5" stroke-dasharray="3.2 2.6"/><circle cx="12" cy="12" r="2.6"/></symbol>
   </defs>
 </svg>
@@ -57,8 +63,14 @@
 <main id="lobby" class="lobby" hidden>
   <section class="lobby-intro">
     <div class="wordmark"><img class="logo-light" src="/static/brand/logo.png" alt="MINIME"><img class="logo-dark" src="/static/brand/logo-dark.png" alt="MINIME"></div>
-    <h1>못 오는 사람의 미니미가<br>대신 회의에 들어가요</h1>
-    <p>보고서와 짧은 인터뷰로 만든 미니미가 본인이 확인한 입장만 말하고, 근거가 없으면 질문으로 남겨요. 결정은 돌아온 사람에게 돌려줘요.</p>
+    <h1>내가 회의에 못 가도,<br><span class="accent">내 미니미</span>는 회의에 간다</h1>
+    <p>입장 카드를 근거로 불참한 나를 대신해 토론하고, 최종 결정은 사람이 하는 AI 회의 플랫폼이에요.</p>
+    <ul class="lobby-points">
+      <li><svg class="ic"><use href="#i-bolt"/></svg><span><b>1분이면 준비</b>문서 없이 쟁점만 골라도 돼요</span></li>
+      <li><svg class="ic"><use href="#i-doc"/></svg><span><b>근거가 있을 때만</b>모든 발언에 출처, 모르면 질문으로</span></li>
+      <li><svg class="ic"><use href="#i-check"/></svg><span><b>결정은 사람이</b>불참자 관련 결정은 보류 후 승인</span></li>
+    </ul>
+    <button class="text-btn" id="guideBtn" type="button"><svg class="ic"><use href="#i-help"/></svg>이용 안내 보기</button>
   </section>
 
   <section class="lobby-card">
@@ -142,6 +154,8 @@
             <hr>
             <button data-act="prep"><svg class="ic"><use href="#i-mini"/></svg>내 미니미 준비</button>
             <button data-act="digest"><svg class="ic"><use href="#i-clock"/></svg>내가 빠진 사이</button>
+            <button data-act="privacy"><svg class="ic"><use href="#i-shield"/></svg>개인정보 동의 내용</button>
+            <button data-act="guide"><svg class="ic"><use href="#i-help"/></svg>이용 안내</button>
             <button data-act="agenda"><svg class="ic"><use href="#i-edit"/></svg>안건 편집</button>
             <button id="themeBtn"><svg class="ic"><use href="#i-moon"/></svg>다크 모드</button>
             <hr>
@@ -247,6 +261,7 @@
 <div class="popover" id="popover" hidden></div>
 <div class="toasts" id="toasts" aria-live="assertive"></div>
 
+<script src="/static/guide.js"></script>
 <script src="/static/panels.js"></script>
 <script src="/static/app.js"></script>
 </body>

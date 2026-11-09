@@ -82,10 +82,13 @@ def add_memo(room: Room, p: Persona, text: str, issue_id: str = "") -> Stance:
     text = text.strip()
     if not text:
         raise ValueError("전할 말을 적어 주세요.")
-    if issue_id and room.issue(issue_id) is None:
+    if issue_id == "-":                                  # '쟁점 없이': 회의가 시작되면(첫 발언 때) 전한다
         issue_id = ""
-    if not issue_id:
-        issue_id, _ = detect_issue(room, text)
+    else:
+        if issue_id and room.issue(issue_id) is None:
+            issue_id = ""
+        if not issue_id:
+            issue_id, _ = detect_issue(room, text)
     issue = room.issue(issue_id)
     st = Stance(new_id("s"), issue_id, text[:300], stance_position(issue, text) if issue else "", "", "",
                 ko.red_line(text), "", 1, ["전달 메모"], "confirmed", "memo")
@@ -125,8 +128,12 @@ def clean_lines(lines: list) -> list[dict]:
     return out[-MAX_CHAT_LINES:]
 
 
+_PREFER = re.compile(r"(생각|좋|낫|맞는|맞아|찬성|반대|해야|원해|원한|가자|하자|중요|현실적|맡을|맡겠|할게)")
+
+
 def _rule_chat(room: Room, lines: list[dict], labels: list[str]) -> list[Stance]:
-    """규칙: 쟁점마다 내 말 중 가장 나중에 입장을 밝힌 줄을 주장으로, 숫자·이유가 있는 줄을 근거로."""
+    """규칙: 쟁점마다 입장을 밝힌 내 말 중 선호 표현이 있는 가장 나중 줄을 주장으로,
+    숫자·이유가 있는 줄을 근거로, '꼭·반드시' 같은 조건은 양보 불가선으로 나눈다."""
     out = []
     for issue in room.issues:
         lex = issue_lexicon(issue)
@@ -139,10 +146,13 @@ def _rule_chat(room: Room, lines: list[dict], labels: list[str]) -> list[Stance]
                 continue
             if not issue.options and (overlap < 2 or not ko.STANCE_CUES.search(t)):
                 continue
-            best = (n, t, pos)                           # 나중 말이 지금 생각에 더 가깝다
+            cond_only = bool(ko.red_line(t)) and not _PREFER.search(re.sub(r"(꼭|반드시|절대)\s*\S+", "", t))
+            score = (2 if _PREFER.search(t) else 0) - (2 if cond_only else 0) + n / max(1, len(lines))   # 나중 말일수록 지금 생각
+            if not best or score >= best[0]:
+                best = (score, n, t, pos)
         if not best:
             continue
-        n, t, pos = best
+        _, n, t, pos = best
         reason, rn = "", None
         for m, ln in enumerate(lines):
             if m == n:
@@ -154,8 +164,12 @@ def _rule_chat(room: Room, lines: list[dict], labels: list[str]) -> list[Stance]
         red = next((ko.red_line(ln["text"]) for ln in lines
                     if (stance_position(issue, ln["text"]) == pos or not pos) and ko.red_line(ln["text"])), "")
         srcs = [labels[n]] + ([labels[rn]] if rn is not None else [])
-        out.append(Stance(new_id("s"), issue.id, ko.casual_to_polite(t), pos,
-                          ko.casual_to_polite(reason[1]) if reason else "", "", red, "", 2, srcs, "candidate", "chat"))
+        lead = re.compile(r"^(근데|그런데|그래서|그럼|아|음|일단|솔직히)\s+")       # 대화체 접속어는 입장 문장에서 뺀다
+        claim = ko.casual_to_polite(lead.sub("", t))
+        why = ko.casual_to_polite(lead.sub("", reason[1])) if reason else ""
+        if red and red.rstrip(".") in claim:
+            red = ""                                        # 주장 문장과 같은 조건은 두 번 쓰지 않는다
+        out.append(Stance(new_id("s"), issue.id, claim, pos, why, "", red, "", 2, srcs, "candidate", "chat"))
     return out
 
 

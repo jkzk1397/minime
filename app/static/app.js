@@ -119,10 +119,38 @@
       P = window.MMPanels({
         $, $$, h, fill, icon, avatar, tag, toast, api, busy, S, send, me, nameOf, engineLabel, fmtTime, clip,
         openModal, closeModal, confirmModal, openSheet, closeSheet, toggleAway, setTab, openRight,
-        renderCited, decideForm, ACT, VERDICT, DSTATUS, ISTATUS, RSTATE, MODE_KO,
+        renderCited, decideForm, ACT, VERDICT, DSTATUS, ISTATUS, RSTATE, MODE_KO, speakBtn, guide, store,
       });
     }
     return P;
+  }
+  let G = null;   // guide.js: 온보딩 카드 · 개인정보 동의
+  function guide() {
+    if (!G) G = window.MMGuide({ $, h, fill, icon, toast, api, openModal, closeModal, store });
+    return G;
+  }
+
+  // ---- 음성 브리핑: 브라우저 음성 합성(ko-KR)으로 요약을 읽어 준다 (계획서의 '요약 음성 브리핑')
+  const tts = { on: null };
+  function speakText(text, btn) {
+    const synth = window.speechSynthesis;
+    if (!synth || typeof SpeechSynthesisUtterance === 'undefined') { toast('이 브라우저는 음성 읽기를 지원하지 않아요.', 'bad'); return; }
+    if (tts.on) { synth.cancel(); const was = tts.on; tts.on = null; if (was === btn) return; }
+    const u = new SpeechSynthesisUtterance(text.replace(/\s*\[[^\]]{1,30}\]/g, '').replace(/[·•]/g, ', '));
+    u.lang = 'ko-KR'; u.rate = 1.05;
+    const voice = synth.getVoices().find(v => /ko/i.test(v.lang));
+    if (voice) u.voice = voice;
+    const reset = () => { if (tts.on === btn) tts.on = null; if (btn && btn.isConnected) btn.setAttribute('aria-pressed', 'false'); };
+    u.onend = reset; u.onerror = reset;
+    tts.on = btn;
+    if (btn) btn.setAttribute('aria-pressed', 'true');
+    synth.speak(u);
+  }
+  function speakBtn(getText, label = '음성으로 듣기') {
+    const b = h('button', { class: 'btn sm ghost speak-btn', type: 'button', 'aria-pressed': 'false', title: '브라우저 음성으로 읽어 줘요. 다시 누르면 멈춰요.' },
+      icon('play', 'xs'), label);
+    b.addEventListener('click', () => speakText(getText(), b));
+    return b;
   }
 
   // ================================================================ 시작
@@ -135,6 +163,13 @@
     const sess = tabStore.get('minime.session');
     if (sess && (!roomQ || roomQ === sess.room) && !qs.has('lobby')) join(sess.room, sess.uid, sess.observer);
     else showLobby(roomQ || (sess && sess.room) || '');      // 기본 방 없음: 방 코드를 직접 넣거나 새로 만든다
+    if (qs.has('guide') || (!guide().onboarded() && !qs.has('observer'))) openGuide();   // 처음 온 사람에게 이용 안내 카드 5장
+  }
+  function openGuide(start = 0) {
+    guide().openOnboarding({ start, onFinish: done => {
+      if (done && S.me && !S.observer && !$('#app').hidden) panels().openPrep(S.me, { tab: 1 });   // 마지막 카드 → 내 미니미 준비
+      else if (done && !$('#lobby').hidden) { const r = $('#roomInput'); if (r && !r.value) r.focus(); }
+    } });
   }
 
   // ================================================================ 로비
@@ -174,11 +209,19 @@
   }
 
   function pickSeat(roomId, m) {
-    if (!m.online) return join(roomId, m.user_id, false);
+    if (!m.online) return enter(roomId, m.user_id);
     confirmModal({
       eyebrow: '자리 선택', title: `${m.name} 님 자리는 이미 접속 중이에요`,
-      body: '같은 사람이 다른 기기로 들어오는 경우에만 계속하세요.', ok: '들어가기', onOk: () => join(roomId, m.user_id, false),
+      body: '같은 사람이 다른 기기로 들어오는 경우에만 계속하세요.', ok: '들어가기', onOk: () => enter(roomId, m.user_id),
     });
+  }
+  // 자리에 앉기 전에 개인정보 수집·이용 동의를 받는다 (항목별 · 기본값 해제). 거부하면 관전으로만 볼 수 있다.
+  async function enter(roomId, uid, after) {
+    const r = await guide().ensureConsent(roomId, uid);
+    if (r === 'ok') { join(roomId, uid, false); if (after) after(); }
+    else if (r === 'observe') { join(roomId, null, true); toast('동의 없이 발표 화면(관전)으로 들어왔어요. 말하려면 자리를 다시 골라 주세요.'); }
+    else if (!$('#lobby').hidden) loadLobbyRoom(roomId);
+    else showLobby(roomId);
   }
 
   // ================================================================ 입장 · 연결
@@ -196,6 +239,15 @@
     $('#demoBtn').hidden = roomId !== 'demo';              // 시연 가이드는 예전 demo 방에서만 (실전 방에는 없음)
     if (observer && roomId === 'demo') openDemoPanel();
     connect();
+  }
+  function checkMyConsent() {
+    const m = me();
+    if (!m || S.observer || !m.consent || m.consent.ok || S.consentAsked) return;
+    S.consentAsked = true;
+    guide().openConsent(S.roomId, S.me, { current: m.consent }).then(r => {
+      S.consentAsked = false;
+      if (!(r && r.result === 'ok')) { toast('동의하지 않으면 회의에서 말할 수 없어요. 관전으로 바꿀게요.'); leave(); }
+    });
   }
   function wsUrl() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -283,6 +335,8 @@
     if (S.unknownSeen) { S.unknownSeen = false; renderFeed(); }
     renderMembers(); renderMyCard(); renderAvatarStack(); renderComposerState(); panels().renderGate();
     if (S.prep && S.prep.preview) panels().refreshPrep();
+    checkMyConsent();
+    if (!S.messages.length) renderFeed();
   }
 
   // ================================================================ 사이드바 · 헤더
@@ -393,13 +447,27 @@
   }
 
   // ================================================================ 대화
+  const talked = () => S.messages.some(x => x.kind === 'human' || x.kind === 'mini');
   function renderFeed() {
     const feed = $('#feed');
     S.msgEls.clear();
-    if (!S.messages.length) {
+    if (!talked()) {
+      const m = me();
+      const r = (m && m.readiness) || { covered: 0, total: 0 };
+      const step = (done, title, desc, btn) => h('li', { class: done ? 'done' : '' },
+        h('span', { class: 'n' }, done ? icon('check', 'xs') : null),
+        h('div', { class: 'grow' }, h('b', { text: title }), h('div', { class: 'muted sm', text: desc })), btn);
       fill(feed, h('div', { class: 'feed-empty' }, h('img', { class: 'brand-icon', src: '/static/brand/apple-touch-icon.png', alt: '' }),
         h('h3', { text: '회의를 시작해 보세요' }),
-        h('p', { text: '첫 메시지를 보내면 회의가 시작돼요. 자리를 비운 팀원의 미니미는 근거가 있을 때만 말해요.' })));
+        m && !S.observer ? h('ol', { class: 'start-steps' },
+          step(r.total > 0 && r.covered === r.total, '내 미니미 준비', r.total ? `쟁점 ${r.covered}/${r.total} 준비됨 · 1분이면 돼요` : '안건과 쟁점을 먼저 정해 주세요',
+            h('button', { class: 'btn xs', type: 'button', on: { click: () => panels().openPrep(S.me, { tab: 1 }) } }, '준비하기')),
+          step(!!m.mini_on, '못 오는 날엔 자리 비움', '미니미가 대신 참석해요', null),
+          step(false, '첫 메시지로 회의 시작', '안건 이야기를 꺼내 보세요', null))
+          : h('p', { text: '첫 메시지를 보내면 회의가 시작돼요.' }),
+        h('button', { class: 'text-btn sm', type: 'button', on: { click: () => openGuide(0) } }, icon('help', 'xs'), '이용 안내')));
+      let prev0 = null;                                    // 안건 변경 같은 알림은 시작 안내 위에 그대로 보여 준다
+      feed.prepend(...S.messages.map(x => { const el = renderMessage(x, prev0); prev0 = x; return el; }));
       return;
     }
     let prev = null;
@@ -410,10 +478,12 @@
     if (S.msgEls.has(m.id)) return;
     const feed = $('#feed');
     const near = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 180;
-    if (!S.messages.length) fill(feed);
     const prev = S.messages[S.messages.length - 1] || null;
     S.messages.push(m);
-    feed.append(renderMessage(m, prev));
+    const empty = $('.feed-empty', feed);
+    if (empty && (m.kind === 'human' || m.kind === 'mini')) empty.remove();
+    if (empty && empty.isConnected) empty.before(renderMessage(m, prev));
+    else feed.append(renderMessage(m, prev));
     if (m.kind === 'mini' || m.kind === 'human') delete S.typing[`${m.user_id}|${m.kind === 'mini'}`];
     renderTyping();
     if (near || m.user_id === S.me || ['verify', 'result', 'facilitator', 'decision'].includes(m.kind)) {
@@ -496,15 +566,23 @@
     const bubble = h('div', { class: 'bubble' });
     renderCited(bubble, m.text, meta.citations || []);
     whyBubble(bubble, meta);
-    const label = abst ? (abst === 'commit' ? '약속 보류' : '확인 필요') : (ACT[meta.act] || '');
+    const label = abst ? (abst === 'commit' ? '약속 보류' : '확인 필요') : (meta.memo ? '전달 메모' : (ACT[meta.act] || ''));
+    const rv = meta.review || {};
     const vf = meta.verify;
     const vtxt = vf && (vf.passed || vf.dropped) ? `근거 검증(${VERIFIER_KO[vf.method] || vf.method}) ${vf.passed}문장 통과${vf.dropped ? ` · ${vf.dropped}문장 삭제` : ''}` : (meta.dropped ? `근거 없는 문장 ${meta.dropped}개 삭제` : '');
     bubble.title = [`왜 이렇게 말했는지 보기 · ${engineLabel(meta.engine)}`, vtxt].filter(Boolean).join(' · ');
-    return h('div', { class: `row mini other c${mem.color || 0} ${cont ? 'cont' : 'first'}${!cont && chained(m, prev) ? ' chain' : ''}${abst ? ' abstain' : ''}` },
+    if (meta.memo) bubble.title = `${mem.name} 님이 회의 전에 남긴 메모를 미니미가 고치지 않고 그대로 전했어요`;
+    const guard = (meta.sentences || []).some(x => x.guard === 'red_line');
+    return h('div', { class: `row mini other c${mem.color || 0} ${cont ? 'cont' : 'first'}${!cont && chained(m, prev) ? ' chain' : ''}${abst ? ' abstain' : ''}${meta.memo ? ' memo' : ''}${rv.status === 'fix' ? ' fixed' : ''}` },
       miniAvatar(mem),
       h('div', { class: 'col' },
-        cont ? null : miniHead(mem, label, m.ts),
-        bubble));
+        cont && !rv.status ? null : h('div', { class: 'who' }, h('b', { text: `${mem.name} 미니미` }), label ? chipTag(label) : null,
+          rv.status === 'ok' ? h('span', { class: 'chip-tag ok', title: `${mem.name} 님이 돌아와서 맞다고 확인했어요`, text: '본인 확인' }) : null,
+          rv.status === 'fix' ? h('span', { class: 'chip-tag bad', title: `${mem.name} 님이 돌아와서 바로잡았어요`, text: '본인 정정' }) : null,
+          guard ? h('span', { class: 'chip-tag', title: '입장 카드의 양보 불가 조건이 빠지지 않게 덧붙였어요', text: '조건 유지' }) : null,
+          m.ts ? h('time', { text: fmtTime(m.ts) }) : null),
+        bubble,
+        rv.status === 'fix' && rv.note ? h('div', { class: 'fix-note' }, h('b', { text: `${mem.name} 님 정정 ` }), rv.note) : null));
   }
   function renderCited(el, text, citations) {
     // 문장 뒤 [보고서 3] 같은 꼬리표는 지우고, 그 문장에 은은한 밑줄을 그어 누르면 원문이 보이게 한다
@@ -584,6 +662,8 @@
             h('span', { class: `s ${r ? (r.action === 'approve' ? 'ok' : 'bad') : ''}`, text: r ? (r.action === 'approve' ? '승인' : '이의') : '확인 전' }));
         })) : null),
       Object.entries(responses).filter(([, r]) => r.note).map(([u, r]) => h('div', { class: 'note-line' }, h('b', { text: `${nameOf(u)} ` }), r.note)),
+      (d.dissent_names || []).length ? h('div', { class: 'note-line dissent', title: '결정과 다른 입장을 밝힌 사람이에요. 회의록에도 남아요.' },
+        h('b', { text: '다른 입장 ' }), d.dissent_names.join(', ')) : null,
       canDecide ? decideForm(d) : null);
   }
   function decideForm(d, after) {
@@ -680,8 +760,16 @@
   }
   function minutesBody(m) {
     const x = m.meta || {};
+    const rv = x.review || {};
+    const spoken = () => [x.summary || m.text, ...(x.issues || []).map(it => {
+      const d = it.decision ? liveDecision(it.decision.id, it.decision) : null;
+      return `${it.title}. ${d ? `결정, ${d.text}. ${d.status_ko || ''}` : '아직 결정 없음'}`;
+    }), ...(x.next_steps || []).map(t => `다음 할 일, ${t}`)].join('. ');
     return h('div', { class: 'result-card' },
-      h('p', { class: 'lead-text', text: x.summary || m.text }),
+      h('div', { class: 'hrow', style: 'justify-content:space-between' }, h('p', { class: 'lead-text', style: 'margin:0', text: x.summary || m.text }), speakBtn(spoken)),
+      rv.spoken ? h('div', { class: 'stats' }, h('span', {}, '미니미 발언 ', h('b', { text: rv.spoken })),
+        h('span', {}, '본인 확인 ', h('b', { text: rv.reviewed })), h('span', {}, '정정 ', h('b', { text: rv.fix })),
+        rv.fix_rate != null ? h('span', { title: '계획서 07 종료 기준: 발언 수정률 15% 이하' }, '수정률 ', h('b', { text: `${Math.round(rv.fix_rate * 100)}%` })) : null) : null,
       (x.issues || []).map((it, i) => {
         const d = it.decision ? liveDecision(it.decision.id, it.decision) : null;
         const s = d ? (DSTATUS[d.status] || ['', '']) : (it.status === 'untouched' ? ['미논의', 'plain'] : ['논의 중', 'info']);
@@ -690,7 +778,8 @@
           (it.opinions || []).length ? h('ul', {}, it.opinions.map(o => h('li', { class: `op c${colorOf(o.uid)}` }, h('b', { text: o.who }), o.position ? ` (${o.position})` : '', ` ${o.text}`))) : null,
           (it.conflicts || []).map(c => h('div', { class: 'conf', text: `충돌 · ${c}` })),
           d ? h('div', { class: 'note-line' }, h('b', { text: '결정 ' }), d.text,
-            d.status === 'pending' && (d.affected_names || []).length ? ` · ${d.affected_names.join(', ')} 확인 전` : '') : null);
+            d.status === 'pending' && (d.affected_names || []).length ? ` · ${d.affected_names.join(', ')} 확인 전` : '',
+            (d.dissent_names || []).length ? ` · 다른 입장: ${d.dissent_names.join(', ')}` : '') : null);
       }),
       (x.questions || []).length ? h('div', { class: 'points' }, x.questions.map(q => h('div', { class: 'point' }, h('span', { class: 'k', text: `${q.who} 확인` }), h('span', { text: q.text })))) : null,
       (x.next_steps || []).length ? h('div', { class: 'points' }, x.next_steps.map(s2 => h('div', { class: 'point' }, h('span', { class: 'k', text: '다음' }), h('span', { text: s2 })))) : null,
@@ -828,9 +917,12 @@
     else if (st.slow.startsWith('ollama')) { cls = 'local'; text = `로컬 ${st.slow.split(':').slice(1).join(':')}`; }
     else if (st.slow.startsWith('api')) { cls = 'api'; text = `API ${st.slow.split(':').slice(1).join(':')}`; }
     const pill = $('#enginePill');
-    pill.className = `engine ${cls}`;
-    $('#engineText').textContent = text;
-    pill.title = `판단 ${engineLabel(st.fast)} · 작성 ${engineLabel(st.slow)} · 임베딩 ${st.embed}`;
+    const vm = (st.verifier && st.verifier.method) || '';
+    const weak = vm === 'lexical' && !st.slow.startsWith('rule') && !st.force_rule;   // 모델이 쓰는데 검증은 핵심어뿐
+    pill.className = `engine ${cls}${weak ? ' weak' : ''}`;
+    $('#engineText').textContent = weak ? `${text} · 근거 검증 약함` : text;
+    pill.title = `판단 ${engineLabel(st.fast)} · 작성 ${engineLabel(st.slow)} · 임베딩 ${st.embed} · 근거 검증 ${VERIFIER_KO[vm] || vm || '-'}`
+      + (weak ? '\nNLI 검증 모델이 없어 핵심어 검사로 대신하고 있어요. 시연 전에 requirements-ml.txt를 설치해 주세요.' : '');
   }
 
   // ================================================================ 모달 · 시트
@@ -1064,12 +1156,15 @@
       const f = e.currentTarget; const room = $('#lobbyRoom').dataset.room;
       try {
         const m = await api('POST', `/api/rooms/${encodeURIComponent(room)}/members`, { name: f.name.value, role: f.role.value });
-        f.reset(); join(room, m.user_id, false);
-        toast(`${m.name} 님, 환영해요. 먼저 내 미니미를 준비해 보세요.`);
-        setTimeout(() => panels().openPrep(m.user_id, { tab: 0 }), 600);
+        f.reset();
+        enter(room, m.user_id, () => {
+          toast(`${m.name} 님, 환영해요. 먼저 내 미니미를 준비해 보세요.`);
+          setTimeout(() => panels().openPrep(m.user_id, { tab: 1 }), 500);
+        });
       } catch (err) { toast(err.message, 'bad'); }
     });
     $('#observeBtn').addEventListener('click', () => join($('#lobbyRoom').dataset.room, null, true));
+    $('#guideBtn').addEventListener('click', () => openGuide(0));
     $('#adminBtn').addEventListener('click', () => openAdmin());
     $('#newRoomForm').addEventListener('submit', async e => {
       e.preventDefault();
@@ -1134,6 +1229,8 @@
       else if (act === 'digest') { if (send({ type: 'digest' })) setTimeout(() => { if (!S.digest) toast('아직 기록이 없어요. 자리 비움을 켰다가 돌아오면 생겨요.'); }, 700); }
       else if (act === 'agenda') { if (S.observer) toast('발표 화면에서는 안건을 바꿀 수 없어요.'); else panels().openAgenda(); }
       else if (act === 'leave') leave();
+      else if (act === 'guide') openGuide(0);
+      else if (act === 'privacy') { if (S.observer || !S.me) toast('자리를 고른 뒤에 볼 수 있어요.'); else guide().openConsent(S.roomId, S.me, { current: (me() || {}).consent, change: true }).then(r => { if (r && r.member && S.prep) panels().refreshPrep(); }); }
     });
     $('#modal').addEventListener('click', e => { if (e.target.closest('[data-close]')) closeModal(); });
     $('#sheet').addEventListener('click', e => { if (e.target.closest('[data-sclose]')) closeSheet(); });

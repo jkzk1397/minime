@@ -4,7 +4,7 @@
 'use strict';
 window.MMPanels = function (ctx) {
   const { $, $$, h: h0, fill: fill0, icon, avatar, tag, toast, api, busy, S, send, nameOf, engineLabel, fmtTime, clip,
-    openModal, closeModal, confirmModal, openSheet, toggleAway, renderCited, decideForm, ACT, DSTATUS, RSTATE } = ctx;
+    openModal, closeModal, confirmModal, openSheet, toggleAway, renderCited, decideForm, ACT, DSTATUS, RSTATE, speakBtn, guide } = ctx;
 
   // ================================================================ 작은 도구
   // 중첩 배열·null 자식을 여기서 펼치고 걸러서, core의 h·fill 구현에 기대지 않는다.
@@ -34,7 +34,7 @@ window.MMPanels = function (ctx) {
   // ================================================================ 미니미의 머릿속
   const ZONE = { high: ['확실히 높음', 'ok'], mid: ['애매한 구간', 'warn'], low: ['확실히 낮음', ''], called: ['이름 호출', 'info'], none: ['후보 없음', ''] };
   const SPEAK = { rebuttal: '반론해요', opinion: '의견을 내요', answer: '답해요', agree_add: '조건을 붙여 동의해요' };
-  const SRC_KO = { report: '보고서', stance: '입장 카드', interview: '인터뷰', profile: '약력', past: '지난 발언' };
+  const SRC_KO = { report: '보고서', stance: '입장 카드', interview: '인터뷰', profile: '약력', past: '지난 발언', memo: '전달 메모' };
 
   function curGate() { return S.selGate || S.gate; }
 
@@ -302,7 +302,8 @@ window.MMPanels = function (ctx) {
   }
 
   // ================================================================ 내 미니미 준비
-  const PREP_TABS = ['프로필', '보고서', '입장 인터뷰', '입장 카드', '준비도·대리 참석'];
+  const PREP_TABS = ['프로필', '입장 만들기', '입장 인터뷰', '입장 카드', '준비도·대리 참석'];
+  const LIGHT_ORIGINS = ['quick', 'memo', 'chat', 'import'];
 
   async function openPrep(uid, { tab = null, preview = null } = {}) {
     const isPreview = preview != null ? preview : uid !== S.me;
@@ -341,7 +342,7 @@ window.MMPanels = function (ctx) {
     const prof = d.profile || {};
     const done = [
       !!(prof.intro || (prof.criteria || []).length),
-      (d.reports || []).length > 0,
+      (d.reports || []).length > 0 || (d.stances || []).some(x => LIGHT_ORIGINS.includes(x.origin) && x.status !== 'rejected'),
       (d.interview || []).length > 0 && !d.interview.some(q => q.status === 'open'),
       (d.stances || []).some(s => s.status === 'confirmed'),
       !!r.ready,
@@ -351,7 +352,7 @@ window.MMPanels = function (ctx) {
       type: 'button', class: done[i] ? 'done' : '', 'aria-current': String(tab === i),
       on: { click: () => { P.tab = i; renderPrep(); } },
     }, h('span', { class: 'n', text: done[i] ? '✓' : String(i + 1) }), t)));
-    const body = [prepProfile, prepReports, prepInterview, prepStances, prepReady][tab](d);
+    const body = [prepProfile, prepSources, prepInterview, prepStances, prepReady][tab](d);
     const root = $('#sheetBody');
     fill(root,
       P.preview ? h('div', { class: 'preview-note' }, icon('eye', 'xs'), `${d.name} 님 화면 미리보기 · 읽기 전용`) : null,
@@ -405,20 +406,20 @@ window.MMPanels = function (ctx) {
     const r1 = h('input', { type: 'radio', name: 'mm-scope-level', value: 'opinion', checked: sc.level !== 'answer' });
     const r2 = h('input', { type: 'radio', name: 'mm-scope-level', value: 'answer', checked: sc.level === 'answer' });
     const nc = chipsInput(sc.no_commit, '약속하면 안 되는 것 (예: 마감일)');
-    const c1 = h('input', { type: 'checkbox', checked: cs.use_reports });
-    const c2 = h('input', { type: 'checkbox', checked: cs.store_utterances });
     const save = h('button', { class: 'btn primary', type: 'button' }, '프로필 저장');
     save.addEventListener('click', () => run(save, '저장 중…', async () => {
       const member = await prepApi('PUT', '/profile', {
         name: name.value, role: role.value, intro: intro.value, expertise: exp.values(), criteria: readList(crit), projects: readList(proj),
         tone_examples: readList(tone), scope_level: r2.checked ? 'answer' : 'opinion', no_commit: nc.values(), scope_note: '',
-        use_reports: c1.checked, store_utterances: c2.checked,
       });
       if (!applyPrep(member)) return;
       toast('프로필을 저장했어요.');
       S.prep.tab = 1; renderPrep();
     }));
-    const checkRow = (input, text) => h('label', { class: 'check', style: 'font-weight:500' }, input, text);
+    const consentRow = (label, on) => h('li', {}, h('span', { class: `dot ${on ? 'on' : ''}`, 'aria-hidden': 'true' }), h('span', { class: 'grow', text: label }),
+      h('b', { class: on ? 'ok' : 'muted', text: on ? '동의함' : '동의 안 함' }));
+    const changeConsent = () => guide().openConsent(S.roomId, d.user_id, { current: cs, change: true })
+      .then(r => { if (r && r.member && applyPrep(r.member)) { toast('동의 내용을 저장했어요.'); renderPrep(); } });
     return [
       lead('미니미가 안건을 판단할 때 쓰는 것만 적어 주세요.'),
       tip('작성 팁',
@@ -439,14 +440,56 @@ window.MMPanels = function (ctx) {
       h('div', { class: 'field' }, h('span', { text: '위임 범위' }),
         h('div', { class: 'radio-row' }, h('label', {}, r1, '의견 제시만'), h('label', {}, r2, '질문 답변까지')),
         nc),
-      h('div', { class: 'field' }, h('span', { text: '동의' }),
-        checkRow(c1, '내 보고서를 미니미의 근거로 써도 돼요'),
-        checkRow(c2, '회의 발언에서 입장 변화를 찾아 저장해도 돼요 (확인 전엔 안 써요)')),
+      h('div', { class: 'field' }, h('span', { text: '개인정보 동의' }),
+        h('ul', { class: 'consent-sum' },
+          consentRow('회의 참여 (필수)', cs.service),
+          consentRow('미니미 근거 자료 (선택)', cs.use_reports),
+          consentRow('입장 변화 찾기 (선택)', cs.store_utterances)),
+        h('button', { class: 'text-btn sm', type: 'button', style: 'align-self:flex-start', on: { click: changeConsent } }, icon('shield', 'xs'), '동의 내용 보기·바꾸기')),
       right(save),
     ];
   }
 
+  const FILE_KO = { text: '붙여 넣기', txt: '텍스트', docx: 'Word', pdf: 'PDF', pptx: '발표자료', hwpx: '한글', import: '지난 미니미' };
+
+  function extractPreview(x) {
+    const P = S.prep;
+    const title = h('input', { value: x.title || '', maxlength: 60 });
+    const ta = h('textarea', { rows: 12, value: x.text || '' });
+    let edited = false;
+    const keepNote = h('div', { class: 'muted sm', text: x.pages ? '출처에 쪽 번호가 붙어요 (예: p.3)' : '' });
+    ta.addEventListener('input', () => { if (!edited && x.pages) keepNote.textContent = '글을 고쳐서 쪽 번호는 빠져요'; edited = true; });
+    const go = h('button', { class: 'btn primary', type: 'button' }, icon('spark'), '올리고 입장 찾기');
+    go.addEventListener('click', () => {
+      if (!ta.value.trim()) { toast('올릴 내용이 비어 있어요.'); return; }
+      run(go, '분석 중…', async () => {
+        const res = await prepApi('POST', '/reports', { title: title.value, text: ta.value, source: x.source, pages: edited ? null : x.pages });
+        P.extract = null;
+        afterReport(res);
+      });
+    });
+    return [
+      h('div', { class: 'extract-head' }, icon('doc'), h('div', { class: 'grow' },
+        h('b', { text: '꺼낸 글 확인' }),
+        h('div', { class: 'muted sm', text: [FILE_KO[x.source] || x.source, `문단 ${x.paragraphs}개`, `${(x.chars || 0).toLocaleString()}자`, x.pages ? `${x.pages.length}쪽` : ''].filter(Boolean).join(' · ') }))),
+      (x.warnings || []).length ? h('ul', { class: 'warn-list' }, x.warnings.map(w => h('li', {}, icon('alert', 'xs'), h('span', { text: w })))) : null,
+      h('p', { class: 'muted sm', style: 'margin:0', text: '숫자와 내 입장이 맞게 들어갔는지 보고, 틀린 곳은 고쳐 주세요.' }),
+      h('label', { class: 'field' }, h('span', { text: '제목' }), title),
+      h('label', { class: 'field' }, h('span', { text: '내용' }, h('small', { text: '빈 줄 = 문단' })), ta, keepNote),
+      h('div', { class: 'hrow', style: 'justify-content:flex-end' },
+        h('button', { class: 'btn ghost', type: 'button', on: { click: () => { P.extract = null; renderPrep(); } } }, '취소'), go),
+    ];
+  }
+
+  function afterReport(res) {
+    if (!applyPrep(res && res.member)) return;
+    toast(res.candidates ? `입장 카드 초안 ${res.candidates}개를 만들었어요. 인터뷰에서 확인해 주세요.`
+      : '자료를 올렸어요. 입장이 드러난 문단은 없어서 인터뷰로 채울게요.');
+    S.prep.tab = 2; renderPrep();
+  }
+
   function prepReports(d) {
+    if (S.prep.extract) return extractPreview(S.prep.extract);
     const reports = d.reports || [];
     const title = h('input', { placeholder: '보고서 제목 (예: 자료조사 보고서)', maxlength: 60 });
     const text = h('textarea', { rows: 7, placeholder: '보고서 내용을 붙여 넣으세요. 빈 줄로 문단을 나눠 주세요.' });
@@ -461,26 +504,25 @@ window.MMPanels = function (ctx) {
         '아직 모르는 것: ___은 확인이 필요하다.'].join('\n\n');
       text.focus();
     });
-    const after = res => {
-      if (!applyPrep(res && res.member)) return;
-      toast(res.candidates ? `입장 카드 초안 ${res.candidates}개를 만들었어요. 인터뷰에서 확인해 주세요.`
-        : '보고서를 올렸어요. 입장이 드러난 문단은 없어서 인터뷰로 채울게요.');
-      S.prep.tab = 2; renderPrep();
-    };
+    const after = afterReport;
     add.addEventListener('click', () => {
       if (!text.value.trim()) { toast('보고서 내용을 붙여 넣어 주세요.'); return; }
       run(add, '분석 중…', async () => after(await prepApi('POST', '/reports', { title: title.value, text: text.value })));
     });
-    const file = h('input', { type: 'file', accept: '.txt,.md,.docx,.pdf', hidden: true });
+    const file = h('input', { type: 'file', accept: '.txt,.md,.docx,.pdf,.pptx,.hwpx', hidden: true });
     const pick = h('button', { class: 'link', type: 'button', on: { click: () => file.click() } }, '파일 고르기');
     const drop = h('div', { class: 'dropzone' },
       h('div', { class: 'hrow', style: 'justify-content:center;gap:6px' }, icon('upload', 'xs'), '파일을 끌어다 놓거나', pick),
-      h('div', { class: 'sm', style: 'margin-top:4px;color:var(--faint)', text: 'txt · md · docx · pdf' }));
+      h('div', { class: 'sm', style: 'margin-top:4px;color:var(--faint)', text: 'txt · md · docx · pdf · pptx · hwpx' }));
     const upload = async f => {
       if (!f || !S.prep || S.prep.preview) return;
-      const fd = new FormData(); fd.append('file', f); fd.append('title', title.value);
-      fill(drop, '분석 중…');
-      try { after(await prepApi('POST', '/reports/upload', fd, true)); } catch (e) { toast(e.message, 'bad'); renderPrep(); }
+      const fd = new FormData(); fd.append('file', f);
+      fill(drop, '파일에서 글을 꺼내는 중…');
+      try {
+        const x = await prepApi('POST', '/reports/extract', fd, true);
+        if (title.value.trim()) x.title = title.value.trim();
+        S.prep.extract = x; renderPrep();
+      } catch (e) { toast(e.message, 'bad'); renderPrep(); }
     };
     file.addEventListener('change', () => upload(file.files[0]));
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
@@ -490,9 +532,9 @@ window.MMPanels = function (ctx) {
       try { if (applyPrep(await prepApi('DELETE', `/reports/${rep.id}`))) renderPrep(); } catch (e) { toast(e.message, 'bad'); }
     };
     return [
-      lead('안건에 대해 쓴 보고서를 올리면 입장 카드 초안을 만들어 드려요.'),
+      lead('보고서·발표자료·메모를 올리면 입장 카드 초안을 만들어요.'),
       tip('작성 팁', bullets([
-        '빈 줄로 문단을 나누면 문단마다 따로 인용돼요.',
+        '빈 줄로 문단을 나누면 문단마다 따로 인용돼요. PDF·발표자료는 쪽 번호도 같이 붙어요.',
         '입장이 드러난 문단은 입장 카드 초안이 돼요.',
         '초안은 내가 확인하기 전까지 근거로 쓰지 않아요.'])),
       h('label', { class: 'field' }, h('span', { text: '제목' }), title),
@@ -506,12 +548,284 @@ window.MMPanels = function (ctx) {
       reports.length ? h('div', { class: 'section-title', text: `올린 보고서 ${reports.length}개` }) : null,
       reports.map(rep => h('div', { class: 'report' },
         h('div', { class: 'report-head' }, icon('doc', 'xs'), h('span', { class: 't', text: rep.title }),
-          h('span', { class: 'muted sm', style: 'font-weight:400', text: `${(rep.paragraphs || []).length}문단` }),
+          h('span', { class: 'muted sm', style: 'font-weight:400', text: [FILE_KO[rep.source] || '', `${(rep.paragraphs || []).length}문단`].filter(Boolean).join(' · ') }),
           h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': '보고서 삭제', title: '삭제', on: { click: removeReport(rep) } }, icon('trash'))),
         // 라벨('보고서2 3문단')이 기본 56px 칸보다 길어서, 목록 전체를 한 격자로 맞춰 라벨 폭을 통일한다
         h('ol', { style: 'display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 10px' },
           (rep.paragraphs || []).map((t, i) => h('li', { style: 'display:contents' },
             h('span', { class: 'lab', style: 'padding-top:1px', text: (rep.labels || [])[i] || `${i + 1}문단` }), h('span', { text: t })))))),
+    ];
+  }
+
+  // ---- 말로 입력 (Web Speech API). 기기 안에서 인식할 수 있으면 그렇게 하고(processLocally), 아니면 처음 한 번 알린다.
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let srWarned = false;
+  function micBtn(target) {
+    if (!SR) return null;
+    const b = h('button', { class: 'icon-btn sm mic', type: 'button', title: '말로 입력', 'aria-label': '말로 입력', 'aria-pressed': 'false' }, icon('mic'));
+    let rec = null;
+    b.addEventListener('click', async () => {
+      if (rec) { rec.stop(); return; }
+      rec = new SR();
+      rec.lang = 'ko-KR'; rec.interimResults = true; rec.continuous = false;
+      let local = false;
+      try { if (SR.available) local = (await SR.available({ langs: ['ko-KR'], processLocally: true })) === 'available'; } catch { /* 지원 안 함 */ }
+      if (local) rec.processLocally = true;
+      else if (!srWarned) { srWarned = true; toast('이 브라우저는 소리를 인식 서버로 보내 글자로 바꿔요. 민감한 내용은 직접 입력해 주세요.'); }
+      const base = target.value.trim() ? `${target.value.trim()} ` : '';
+      rec.onresult = e => { target.value = base + [...e.results].map(r => r[0].transcript).join(''); target.dispatchEvent(new Event('input')); };
+      rec.onend = () => { rec = null; b.setAttribute('aria-pressed', 'false'); target.focus(); };
+      rec.onerror = e => { if (!['aborted', 'no-speech'].includes(e.error)) toast('음성 입력을 쓸 수 없어요. 마이크 권한을 확인해 주세요.', 'bad'); };
+      b.setAttribute('aria-pressed', 'true');
+      try { rec.start(); } catch { rec = null; b.setAttribute('aria-pressed', 'false'); }
+    });
+    return b;
+  }
+
+  // ================================================================ 입장 만들기: 문서 없이도 (app/sources.py)
+  const METHODS = [
+    { k: 'quick', icon: 'bolt', t: '빠른 입장 체크', d: '1분 · 쟁점마다 고르기' },
+    { k: 'docs', icon: 'doc', t: '자료 올리기', d: '보고서·발표자료·한글' },
+    { k: 'chat', icon: 'chat', t: '단톡방에서 찾기', d: '내가 한 말만 골라요' },
+    { k: 'memo', icon: 'note', t: '전달 메모', d: '그대로 전해 줄 말' },
+    { k: 'file', icon: 'box', t: '지난 미니미', d: '파일로 불러오기·내보내기' },
+  ];
+
+  function methodCount(k, d) {
+    const st = (d.stances || []).filter(x => x.status !== 'rejected');
+    if (k === 'docs') return (d.reports || []).filter(r => r.source !== 'import').length;
+    if (k === 'quick') return st.filter(x => x.origin === 'quick').length;
+    if (k === 'chat') return st.filter(x => x.origin === 'chat').length;
+    if (k === 'memo') return st.filter(x => x.origin === 'memo').length;
+    if (k === 'file') return st.filter(x => x.origin === 'import').length + (d.reports || []).filter(r => r.source === 'import').length;
+    return 0;
+  }
+
+  function prepSources(d) {
+    const P = S.prep;
+    if (!P.method) P.method = (d.reports || []).length ? 'docs' : 'quick';
+    const grid = h('div', { class: 'method-grid', role: 'tablist', 'aria-label': '미니미를 만드는 방법' }, METHODS.map(m => {
+      const n = methodCount(m.k, d);
+      return h('button', {
+        type: 'button', role: 'tab', class: 'method', 'aria-selected': String(P.method === m.k),
+        on: { click: () => { P.method = m.k; P.extract = null; renderPrep(); } },
+      }, h('span', { class: 'mi' }, icon(m.icon)), h('span', { class: 'mt', text: m.t }), h('span', { class: 'md', text: m.d }),
+      n ? h('span', { class: 'mn', text: String(n) }) : null);
+    }));
+    const body = { quick: prepQuick, docs: prepReports, chat: prepChat, memo: prepMemo, file: prepFile }[P.method](d);
+    return [
+      lead('편한 방법 하나면 충분해요. 어떤 방법이든 내가 확인한 것만 근거가 돼요.'),
+      grid,
+      h('div', { class: 'method-body' }, body),
+    ];
+  }
+
+  // ---- 빠른 입장 체크: 고른 그대로 '확인된 입장'이 된다 (AI가 덧붙이지 않음)
+  function prepQuick(d) {
+    const issues = (S.room && S.room.issues) || [];
+    if (!issues.length) {
+      return h('div', { class: 'empty-box' }, h('b', { text: '아직 쟁점이 없어요' }),
+        h('p', { class: 'muted sm', text: '왼쪽 위 안건 편집(연필)에서 쟁점을 먼저 정하면, 쟁점마다 내 입장을 고를 수 있어요.' }));
+    }
+    const prev = {};
+    (d.stances || []).filter(x => x.status === 'confirmed' && x.origin === 'quick').forEach(x => { prev[x.issue_id] = x; });
+    const states = [];
+    const rows = issues.map(issue => {
+      const old = prev[issue.id];
+      const opts = (issue.options || []).map(o => o.label);
+      const anyOld = old && /어느 쪽이든 괜찮아요/.test(old.claim);
+      const st = { issue_id: issue.id, choice: old ? (old.position || (anyOld ? '상관없음' : '')) : '' };
+      const oldReason = old ? old.claim.replace(/^저는 .+? 쪽이에요\.\s*/, '').replace(/^저는 이 쟁점은 어느 쪽이든 괜찮아요\.\s*/, '') : '';
+      const reason = h('input', { maxlength: 200, value: oldReason, placeholder: opts.length ? '이유 (선택)' : '내 생각 한 줄', 'aria-label': `${issue.title} 이유` });
+      const red = h('input', { maxlength: 200, value: (old && old.red_line) || '', placeholder: '양보 못 하는 조건 (선택)', 'aria-label': `${issue.title} 양보 못 하는 조건` });
+      const chips = h('div', { class: 'choice-row', role: 'radiogroup', 'aria-label': `${issue.title} 선택지` });
+      const draw = () => fill(chips, [...opts, ...(opts.length ? ['상관없음'] : []), '아직 모름'].map(lbl => h('button', {
+        type: 'button', role: 'radio', class: `choice${lbl === '아직 모름' ? ' unknown' : ''}`,
+        'aria-checked': String((st.choice || '아직 모름') === lbl),
+        on: { click: () => { st.choice = lbl === '아직 모름' ? '' : lbl; draw(); } },
+      }, lbl)));
+      draw();
+      st.read = () => ({ issue_id: issue.id, choice: st.choice, reason: reason.value.trim(), red_line: red.value.trim() });
+      states.push(st);
+      return h('div', { class: 'quick-row' },
+        h('div', { class: 'quick-title' }, h('b', { text: issue.title }), old ? tag('저장됨', 'ok') : null),
+        chips,
+        h('div', { class: 'grid2' }, reason, red));
+    });
+    const save = h('button', { class: 'btn primary', type: 'button' }, icon('check', 'xs'), '이대로 저장');
+    save.addEventListener('click', () => {
+      const items = states.map(x => x.read()).filter(x => x.choice || x.reason);
+      if (!items.length) { toast('쟁점 하나 이상에서 선택지를 고르거나 한 줄을 적어 주세요.'); return; }
+      run(save, '저장 중…', async () => {
+        const res = await prepApi('POST', '/quick', { items });
+        if (!applyPrep(res.member)) return;
+        const r = res.member.readiness || {};
+        toast(`입장 ${res.created}개를 저장했어요. 쟁점 ${r.total || 0}개 중 ${r.covered || 0}개에 답할 수 있어요.`);
+        S.prep.tab = 4; renderPrep();
+      });
+    });
+    return [
+      h('p', { class: 'muted sm', style: 'margin:0', text: '고른 그대로 입장 카드가 돼요. 모르는 쟁점은 "아직 모름"이면 질문으로 남겨요.' }),
+      rows, right(save),
+    ];
+  }
+
+  // ---- 단톡방에서 찾기: 파일은 이 브라우저에서만 읽고, 내 말만 서버로 보낸다
+  const CHAT_SKIP = /(님이 들어왔습니다|님이 나갔습니다|님을 초대했습니다|님을 내보냈습니다|채팅방 관리자가|삭제된 메시지입니다|불법촬영물등 식별 및 게재제한)/;
+  function parseChat(raw) {
+    const text = String(raw || '').replace(/\r\n?/g, '\n');
+    const out = [];
+    let format = 'text'; let day = '';
+    const ampm = (ap, hh, mm) => { let x = Number(hh); if (ap === '오후' && x < 12) x += 12; if (ap === '오전' && x === 12) x = 0; return `${String(x).padStart(2, '0')}:${mm}`; };
+    const RX = {
+      pc: /^\[(.+?)\] \[(오전|오후) (\d{1,2}):(\d{2})\] (.*)$/,
+      mobile: /^(\d{4})[년.]\s*(\d{1,2})[월.]\s*(\d{1,2})[일.]?\s*(?:[월화수목금토일]요일\s*)?(오전|오후)?\s*(\d{1,2}):(\d{2}),\s(.+?)\s:\s(.*)$/,
+      csv: /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})(?::\d{2})?,"((?:[^"]|"")*)","((?:[^"]|"")*)"?$/,
+      day: /^-{3,}\s*(\d{4})년 (\d{1,2})월 (\d{1,2})일.*-{3,}$|^(\d{4})년 (\d{1,2})월 (\d{1,2})일 [월화수목금토일]요일$/,
+      generic: /^([^\s:\[\]\d][^:\n]{0,18}?)\s?[:：]\s(.+)$/,
+    };
+    for (const line of text.split('\n')) {
+      const t = line.trim();
+      if (!t) continue;
+      let m;
+      if ((m = RX.day.exec(t))) { day = `${Number(m[2] || m[5])}/${Number(m[3] || m[6])}`; continue; }
+      if ((m = RX.pc.exec(t))) { format = 'kakao'; out.push({ speaker: m[1].trim(), text: m[5], when: `${day} ${ampm(m[2], m[3], m[4])}`.trim() }); continue; }
+      if ((m = RX.mobile.exec(t))) { format = 'kakao'; out.push({ speaker: m[7].trim(), text: m[8], when: `${Number(m[2])}/${Number(m[3])} ${m[4] ? ampm(m[4], m[5], m[6]) : `${m[5]}:${m[6]}`}` }); continue; }
+      if ((m = RX.csv.exec(t))) { format = 'kakao'; out.push({ speaker: m[6].replace(/""/g, '"'), text: m[7].replace(/""/g, '"'), when: `${Number(m[2])}/${Number(m[3])} ${m[4]}:${m[5]}` }); continue; }
+      if (/^\d{4}[년.-]/.test(t) || /님과 카카오톡 대화|저장한 날짜|^Date,User,Message/.test(t)) continue;   // 머리말·날짜만 있는 줄
+      if (format !== 'kakao' && (m = RX.generic.exec(t))) { out.push({ speaker: m[1].trim(), text: m[2], when: '' }); continue; }
+      if (/^(사진|동영상|이모티콘|파일)(\s?\d+장)?$/.test(t)) continue;                                      // 첨부 표시만 있는 줄
+      if (out.length) out[out.length - 1].text += ` ${t}`;                                                    // 여러 줄 메시지
+    }
+    const msgs = out.filter(x => x.text && !CHAT_SKIP.test(x.text));
+    const count = {};
+    msgs.forEach(x => { count[x.speaker] = (count[x.speaker] || 0) + 1; });
+    const speakers = Object.entries(count).map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+    return { format, messages: msgs, speakers };
+  }
+
+  function prepChat(d) {
+    const P = S.prep;
+    const C = P.chat || (P.chat = { parsed: null, me: '' });
+    if (C.parsed) return chatPick(d, C);
+    const ta = h('textarea', { rows: 4, placeholder: '[지연] [오후 9:02] 나는 B안이 맞는 것 같아' });
+    const file = h('input', { type: 'file', accept: '.txt,.csv', hidden: true });
+    const read = text => {
+      const parsed = parseChat(text);
+      if (parsed.speakers.length < 1 || parsed.messages.length < 2) { toast('대화에서 말한 사람을 찾지 못했어요. 카카오톡 내보내기 파일인지 확인해 주세요.', 'bad'); return; }
+      C.parsed = parsed;
+      const mine = parsed.speakers.find(x => x.name === d.name) || parsed.speakers.find(x => x.name.includes(d.name) || d.name.includes(x.name));
+      C.me = mine ? mine.name : '';
+      renderPrep();
+    };
+    file.addEventListener('change', () => {
+      const f = file.files[0];
+      if (!f) return;
+      if (f.size > 20 * 1024 * 1024) { toast('20MB보다 큰 대화 파일은 기간을 나눠서 내보내 주세요.', 'bad'); return; }
+      const fr = new FileReader();
+      fr.onload = () => read(String(fr.result || ''));
+      fr.readAsText(f, 'utf-8');
+    });
+    const go = h('button', { class: 'btn primary', type: 'button', on: { click: () => { if (ta.value.trim()) read(ta.value); else file.click(); } } }, icon('chat', 'xs'), '대화 읽기');
+    return [
+      h('div', { class: 'privacy-note' }, icon('shield', 'xs'), h('span', { text: '파일은 이 브라우저에서만 읽고, 내 말만 보내요.' })),
+      tip('카카오톡 대화 내보내는 법', bullets([
+        '휴대폰: 단톡방 ≡ → 설정 → 대화 내용 내보내기 → 텍스트만',
+        'PC: 단톡방 ≡ → 대화 내용 → 대화 내보내기',
+        '슬랙·디스코드: "이름: 말" 형식으로 붙여 넣기'])),
+      h('div', { class: 'dropzone' },
+        h('div', { class: 'hrow', style: 'justify-content:center;gap:6px' }, icon('upload', 'xs'), '대화 파일(.txt)을',
+          h('button', { class: 'link', type: 'button', on: { click: () => file.click() } }, '골라 주세요'))),
+      file,
+      h('label', { class: 'field' }, h('span', { text: '또는 붙여 넣기' }), ta),
+      right(go),
+    ];
+  }
+
+  function chatPick(d, C) {
+    const P = S.prep;
+    const mine = C.parsed.messages.filter(x => x.speaker === C.me);
+    const others = C.parsed.messages.length - mine.length;
+    const list = h('div', { class: 'speaker-list', role: 'radiogroup', 'aria-label': '대화에서 내 이름' }, C.parsed.speakers.slice(0, 12).map(sp => h('button', {
+      type: 'button', role: 'radio', class: 'choice', 'aria-checked': String(sp.name === C.me),
+      on: { click: () => { C.me = sp.name; renderPrep(); } },
+    }, sp.name, h('small', { text: ` ${sp.n}` }))));
+    const send = h('button', { class: 'btn primary', type: 'button', disabled: !mine.length }, icon('spark'), '입장 찾기');
+    send.addEventListener('click', () => run(send, '찾는 중…', async () => {
+      const res = await prepApi('POST', '/chat', { lines: mine.slice(-400).map(x => ({ text: x.text, when: x.when })), source: C.parsed.format });
+      P.chat = null;
+      if (!applyPrep(res.member)) return;
+      toast(res.candidates ? `내 말 ${res.lines}줄에서 입장 카드 초안 ${res.candidates}개를 찾았어요. 맞는지 확인해 주세요.`
+        : `내 말 ${res.lines}줄을 기억해 뒀어요. 쟁점에 대한 입장은 찾지 못해서 인터뷰로 채울게요.`);
+      S.prep.tab = res.candidates ? 3 : 2; renderPrep();
+    }));
+    return [
+      h('div', { class: 'section-title', text: '대화에서 내 이름' }),
+      list,
+      h('div', { class: 'privacy-note' }, icon('shield', 'xs'),
+        h('span', { text: C.me ? `내 말 ${mine.length}줄만 보내요 · 다른 사람 말 ${others}줄은 버려요` : '내 이름을 고르면 내 말만 골라내요' })),
+      mine.length ? h('ol', { class: 'chat-sample' }, mine.slice(-3).map(x => h('li', {}, x.when ? h('time', { text: x.when }) : null, h('span', { text: x.text })))) : null,
+      h('div', { class: 'hrow', style: 'justify-content:flex-end' },
+        h('button', { class: 'btn ghost', type: 'button', on: { click: () => { P.chat = null; renderPrep(); } } }, '다시 고르기'), send),
+    ];
+  }
+
+  // ---- 전달 메모: 미니미가 고치지 않고 그대로 전한다
+  function prepMemo(d) {
+    const issues = (S.room && S.room.issues) || [];
+    const memos = (d.stances || []).filter(x => x.origin === 'memo' && x.status === 'confirmed');
+    const sel = h('select', {}, h('option', { value: '', text: '쟁점은 알아서 찾기' }),
+      issues.map(i => h('option', { value: i.id, text: `쟁점: ${i.title}` })), h('option', { value: '-', text: '쟁점 없이 (회의가 시작되면 전하기)' }));
+    const ta = h('textarea', { rows: 3, maxlength: 300, placeholder: '예: B안에 찬성하지만 운영 인력 계획은 꼭 같이 내 주세요.' });
+    const add = h('button', { class: 'btn primary', type: 'button' }, icon('plus', 'xs'), '메모 남기기');
+    add.addEventListener('click', () => {
+      if (!ta.value.trim()) { toast('전할 말을 적어 주세요.'); return; }
+      run(add, '저장 중…', async () => {
+        const res = await prepApi('POST', '/memos', { text: ta.value, issue_id: sel.value });
+        if (!applyPrep(res.member)) return;
+        toast('메모를 남겼어요. 대리 참석을 켜 두면 그대로 전해 줘요.'); renderPrep();
+      });
+    });
+    const remove = st => async () => { try { if (applyPrep(await prepApi('DELETE', `/stances/${st.id}`))) renderPrep(); } catch (e) { toast(e.message, 'bad'); } };
+    const title = id => { const i = issues.find(x => x.id === id); return i ? `${i.title} 나올 때` : '회의 시작 때'; };
+    return [
+      h('p', { class: 'muted sm', style: 'margin:0', text: '미니미가 고치지 않고 그대로, 회의마다 한 번 전해요.' }),
+      h('div', { class: 'field' }, h('div', { class: 'hrow', style: 'justify-content:space-between' }, h('span', { text: '전할 말' }), micBtn(ta)), ta),
+      h('div', { class: 'hrow', style: 'align-items:flex-end' }, h('label', { class: 'field grow', style: 'min-width:200px' }, h('span', { text: '언제' }), sel), add),
+      memos.length ? h('div', { class: 'section-title', text: `남긴 메모 ${memos.length}개` }) : null,
+      memos.map(st => h('div', { class: 'memo-item' }, icon('note', 'xs'),
+        h('div', { class: 'grow' }, h('div', { text: st.claim }), h('div', { class: 'muted sm', text: `${st.label || '메모'} · ${title(st.issue_id)}` })),
+        h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': '메모 삭제', title: '삭제', on: { click: remove(st) } }, icon('trash')))),
+    ];
+  }
+
+  // ---- 지난 미니미: 파일로 내보내고 다른 회의방에서 불러온다
+  function prepFile(d) {
+    const file = h('input', { type: 'file', accept: '.json,application/json', hidden: true });
+    file.addEventListener('change', () => {
+      const f = file.files[0];
+      if (!f) return;
+      const fr = new FileReader();
+      fr.onload = async () => {
+        let data;
+        try { data = JSON.parse(String(fr.result || '')); } catch { toast('미니미 파일을 읽을 수 없어요.', 'bad'); return; }
+        try {
+          const res = await prepApi('POST', '/import', { data });
+          if (!applyPrep(res.member)) return;
+          toast(`자료 ${res.reports}개, 입장 카드 ${res.stances}개를 불러왔어요. 이번 안건에 맞는지 입장 카드에서 확인해 주세요.`);
+          S.prep.tab = res.stances ? 3 : 1; renderPrep();
+        } catch (e) { toast(e.message, 'bad'); }
+      };
+      fr.readAsText(f, 'utf-8');
+    });
+    return [
+      h('div', { class: 'file-cards' },
+        h('div', { class: 'file-card' }, h('b', { text: '내보내기' }),
+          h('p', { class: 'muted sm', text: '프로필·자료·확인된 입장만 담겨요. 다른 사람 말은 없어요.' }),
+          h('a', { class: 'btn', href: `${memberUrl(d.user_id)}/export`, download: `minime-${d.name || 'me'}.json` }, icon('download', 'xs'), '파일 받기')),
+        h('div', { class: 'file-card' }, h('b', { text: '불러오기' }),
+          h('p', { class: 'muted sm', text: '입장 카드는 초안으로 들어와요. 이번 안건에 맞는지 확인해 주세요.' }),
+          h('button', { class: 'btn', type: 'button', on: { click: () => file.click() } }, icon('upload', 'xs'), '파일 고르기'), file)),
     ];
   }
 
@@ -559,7 +873,7 @@ window.MMPanels = function (ctx) {
       go.addEventListener('click', submit);
       inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) submit(); });
       const ex = d.example && (d.example.answers || {})[q.issue_id];
-      return h('div', { class: 'qa' }, head, question, h('div', { class: 'row-form' }, inp, go),
+      return h('div', { class: 'qa' }, head, question, h('div', { class: 'row-form' }, inp, micBtn(inp), go),
         ex ? h('button', { class: 'text-btn sm', type: 'button', style: 'align-self:flex-start;text-align:left;color:var(--accent)',
           on: { click: () => { inp.value = ex; inp.focus(); } } }, `예시 답 넣기: "${ex}"`) : null);
     }
@@ -606,7 +920,8 @@ window.MMPanels = function (ctx) {
   }
 
   const STANCE_STATE = { confirmed: ['확인됨', 'ok'], candidate: ['초안', 'warn'], inferred: ['회의에서 추정', 'info'] };
-  const ORIGIN_KO = { report: '보고서', interview: '인터뷰', memory: '회의 기억', manual: '직접 작성' };
+  const ORIGIN_KO = { report: '보고서', interview: '인터뷰', memory: '회의 기억', manual: '직접 작성', quick: '빠른 입장', memo: '전달 메모',
+    chat: '채팅에서 찾음', correction: '돌아와서 정정', import: '지난 미니미' };
 
   function prepStances(d) {
     const issues = (S.room && S.room.issues) || [];
@@ -649,7 +964,7 @@ window.MMPanels = function (ctx) {
         if (!list.length && !g.id) return null;
         return h('div', { class: 'stack', style: 'gap:8px' },
           h('div', { class: 'group-title', text: g.title }),
-          list.length ? list.map(card) : h('div', { class: 'muted sm', text: '아직 입장이 없어요. 인터뷰에서 채워 주세요.' }));
+          list.length ? list.map(card) : h('div', { class: 'muted sm', text: '아직 입장이 없어요. 입장 만들기나 인터뷰에서 채워 주세요.' }));
       }),
       h('div', { class: 'group-title', text: '직접 추가' }),
       h('div', { class: 'stack', style: 'gap:8px' },
@@ -735,7 +1050,44 @@ window.MMPanels = function (ctx) {
     renderDigest();
   }
 
-  function digestMiniRow(m, x) {
+  function reviewOf(x) {
+    const live = (S.messages || []).find(mm => mm.id === x.id);
+    return (live && live.meta && live.meta.review) || x.review || null;
+  }
+
+  // 돌아온 사람이 미니미가 대신 한 말을 확인한다: 맞아요 / 내 생각과 달라요(+ 바로잡을 말). 정정은 회의방에도 알린다.
+  function reviewBox(x, preview) {
+    const rv = reviewOf(x);
+    if (rv) {
+      return h('div', { class: `review-done ${rv.status}` }, icon(rv.status === 'ok' ? 'check' : 'edit', 'xs'),
+        h('span', { text: rv.status === 'ok' ? '맞다고 확인했어요' : `바로잡았어요${rv.note ? ` · ${rv.note}` : ''}` }));
+    }
+    if (preview || x.abstain) return null;
+    const box = h('div', { class: 'review-box' });
+    const submit = async (status, note = '') => {
+      try {
+        const res = await api('POST', `${memberUrl(S.me)}/messages/${enc(x.id)}/review`, { status, note });
+        x.review = res.message.meta.review;
+        const i = (S.messages || []).findIndex(mm => mm.id === x.id);
+        if (i >= 0) S.messages[i] = res.message;
+        toast(status === 'ok' ? '확인했어요.' : '바로잡았어요. 정정한 말은 입장 카드로 저장했고, 회의방에도 알렸어요.');
+        renderDigest();
+      } catch (e) { toast(e.message, 'bad'); }
+    };
+    const fixForm = () => {
+      const inp = h('input', { maxlength: 300, placeholder: '내 생각은 이래요 (한 줄)' });
+      const go = h('button', { class: 'btn primary xs', type: 'button', on: { click: () => { if (!inp.value.trim()) { inp.focus(); toast('바로잡을 말을 한 줄 적어 주세요.'); return; } submit('fix', inp.value); } } }, '바로잡기');
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) go.click(); });
+      fill(box, h('div', { class: 'row-form' }, inp, go));
+      inp.focus();
+    };
+    fill(box, h('span', { class: 'muted sm', text: '맞나요?' }),
+      h('button', { class: 'btn xs', type: 'button', on: { click: () => submit('ok') } }, icon('check', 'xs'), '맞아요'),
+      h('button', { class: 'btn xs ghost', type: 'button', on: { click: fixForm } }, icon('edit', 'xs'), '달라요'));
+    return box;
+  }
+
+  function digestMiniRow(m, x, preview) {
     const bubble = h('div', { class: 'bubble' });
     renderCited(bubble, x.text || '', x.citations || []);
     return h('div', { class: `row mini first c${m.color || 0}${x.abstain ? ' abstain' : ''}`, style: 'margin-top:0' },
@@ -744,7 +1096,8 @@ window.MMPanels = function (ctx) {
         h('div', { class: 'who' }, h('b', { text: `${m.name} 미니미` }),
           x.abstain ? h('span', { class: 'chip-tag', text: x.abstain === 'commit' ? '약속 보류' : '확인 필요' }) : null,
           x.ts ? h('time', { text: fmtTime(x.ts) }) : null),
-        bubble));
+        bubble,
+        reviewBox(x, preview)));
   }
 
   function renderDigest() {
@@ -759,13 +1112,18 @@ window.MMPanels = function (ctx) {
     const stat = (k, v) => h('span', {}, `${k} `, h('b', { text: String(v) }));
     const section = (title, items) => h('section', { class: 'digest-sec' }, h('div', { class: 'section-title', text: title }), items);
 
+    const spoken = () => [d.summary || '',
+      ...decisions.map(x => `확인이 필요한 결정, ${x.text}`), ...qs.map(q => `남긴 질문, ${q.text}`)].filter(Boolean).join('. ');
+    const reviewed = minis.filter(x => !x.abstain && reviewOf(x)).length;
+    const toReview = minis.filter(x => !x.abstain).length;
     const body = [
       preview ? h('div', { class: 'preview-note' }, icon('eye', 'xs'), `${m.name} 님 화면 미리보기 · 읽기 전용`) : null,
-      h('p', { class: 'digest-sum', text: d.summary || '' }),
+      h('div', { class: 'digest-top' }, h('p', { class: 'digest-sum', text: d.summary || '' }), speakBtn(spoken, '음성 브리핑')),
       h('div', { class: 'stats' },
-        stat('대화', d.count || 0), stat('미니미 발언', minis.length), stat('보류 결정', decisions.length), stat('질문', qs.length),
+        stat('대화', d.count || 0), stat('미니미 발언', minis.length), toReview ? stat('내가 확인', `${reviewed}/${toReview}`) : null,
+        stat('보류 결정', decisions.length), stat('질문', qs.length),
         h('span', { text: `요약 ${engineLabel(d.engine)}` })),
-      minis.length ? section(preview ? `${m.name}의 미니미가 대신 한 말` : '내 미니미가 대신 한 말', minis.map(x => digestMiniRow(m, x))) : null,
+      minis.length ? section(preview ? `${m.name}의 미니미가 대신 한 말` : '내 미니미가 대신 한 말', minis.map(x => digestMiniRow(m, x, preview))) : null,
       decisions.length ? section('확인이 필요한 보류 결정', decisions.map(x => {
         const [l, c] = DSTATUS[x.status] || ['', ''];
         const resp = (x.responses || {})[uid];

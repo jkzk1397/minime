@@ -39,6 +39,7 @@ async def members_payload(room_id: str) -> dict:
             "open_questions": sum(1 for q in p.questions if q.status == "open"),
             "consent": {"ok": (p.consent or {}).get("version") == config.CONSENT_VERSION
                               and bool((p.consent or {}).get("service")),
+                        "service": bool((p.consent or {}).get("service")),
                         "use_reports": persona.allowed(p, "use_reports"),
                         "store_utterances": persona.allowed(p, "store_utterances")},
             "memos": sum(1 for s in p.stances if s.origin == "memo" and s.status == "confirmed"),

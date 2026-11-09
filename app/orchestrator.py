@@ -229,7 +229,7 @@ _owner_hint_at: dict[tuple[str, str], float] = {}
 
 
 async def _present_owner_hint(room: Room, room_id: str, text: str, uid: str) -> None:
-    """'동준 미니미, …'처럼 미니미를 불렀는데 주인이 자리에 있으면, 왜 미니미가 답하지 않는지 알려 준다 (1분에 한 번)."""
+    """'도윤 미니미, …'처럼 미니미를 불렀는데 주인이 자리에 있으면, 왜 미니미가 답하지 않는지 알려 준다 (1분에 한 번)."""
     names = {u: p.name for u, p in room.personas.items()}
     for u in ko.addressed_mini(text, names):
         p = room.personas.get(u)

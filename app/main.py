@@ -149,7 +149,7 @@ class RoomIn(BaseModel):
     title: str = ""
     agenda: str = ""
     issues: list[IssueIn] = Field(default_factory=list)
-    seed: bool | str = False          # True: 시연 시나리오 · "live": 실전 시연(동준만 비우고 나머지 자료 채움)
+    seed: bool | str = False          # True: 시연 시나리오 · "live": 실전 시연(도윤만 비우고 나머지 자료 채움)
 
 
 _LOCAL_HOSTS = ("127.0.0.1", "::1", "localhost", "testclient")
@@ -609,7 +609,7 @@ class DemoIn(BaseModel):
 @app.post("/api/demo/{room_id}/run")
 async def demo_run(room_id: str, body: DemoIn):
     room = _room(room_id)
-    if room_id != "demo" and not {"jongwon", "hyejung", "jungmin", "dongjun"} <= set(room.personas):
+    if room_id != "demo" and not {"minjun", "jiyeon", "harin", "doyun"} <= set(room.personas):
         # 시연 가이드의 첫 장면은 방을 시연용 시나리오로 덮어쓴다. 실전 방(빈 방에서 직접 만든 방)을 지키기 위해 막는다.
         raise HTTPException(400, "시연 가이드는 시연용 시나리오로 만든 방에서만 실행돼요. 이 방은 직접 진행해 주세요.")
     if not 0 <= body.scene < len(demo.SCENES):

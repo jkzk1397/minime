@@ -10,7 +10,7 @@ import { ensureFonts } from "../fonts";
 
 ensureFonts();
 
-const HJ = PEOPLE.hyejung.color;
+const HJ = PEOPLE.jiyeon.color;
 const CENTER = { x: 1180, y: 560 };
 const R = 230;
 
@@ -111,7 +111,7 @@ export const S1Prepare: React.FC = () => {
           <circle cx={R + 20} cy={R + 20} r={R} fill="none" stroke={ringColor} strokeWidth={20} strokeLinecap="round" strokeDasharray={`${len * ready} ${len}`} />
         </svg>
         <At x={CENTER.x} y={CENTER.y + 26} anchor="center" style={{ scale: `${bounce}` }}>
-          <Minime who="hyejung" size={300} blinkAt={[60, 120]} />
+          <Minime who="jiyeon" size={300} blinkAt={[60, 120]} />
         </At>
         <At x={CENTER.x} y={CENTER.y + R + 50} anchor="top" style={{ opacity: Math.min(1, tag * 1.5), scale: `${mix(tag, 0.6, 1)}` }}>
           <Tag tone="ok" size={40}>

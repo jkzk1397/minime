@@ -118,12 +118,12 @@ export const S0Intro: React.FC = () => {
             opacity: roomIn,
           }}
         >
-          <MeetingTable seats={{ jongwon: "person", hyejung: "empty", jungmin: "person", dongjun: "empty" }} at={{ jongwon: 8, hyejung: 12, jungmin: 14, dongjun: 16 }} />
+          <MeetingTable seats={{ minjun: "person", jiyeon: "empty", harin: "person", doyun: "empty" }} at={{ minjun: 8, jiyeon: 12, harin: 14, doyun: 16 }} />
         </div>
 
         {/* 못 오는 두 사람 */}
-        <Absentee who="hyejung" fromX={-120} toX={320} d={0} />
-        <Absentee who="dongjun" fromX={-420} toX={720} d={6} />
+        <Absentee who="jiyeon" fromX={-120} toX={320} d={0} />
+        <Absentee who="doyun" fromX={-420} toX={720} d={6} />
 
         {/* 일정 충돌 */}
         <div

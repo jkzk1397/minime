@@ -1,7 +1,7 @@
 """실전 시연 자동 진행 (docs/06-실전-시연-대본.md).
 
-'실전 시연용'으로 만든 방에서 동준(발표자)의 대리 참석이 켜지는 순간 시작한다.
-종원·정민의 대사, 2차 검증 요청, 역할 결정을 대본 순서대로 보낸다 (회의 종료는 마지막에 직접).
+'실전 시연용'으로 만든 방에서 도윤(발표자)의 대리 참석이 켜지는 순간 시작한다.
+민준·하린의 대사, 2차 검증 요청, 역할 결정을 대본 순서대로 보낸다 (회의 종료는 마지막에 직접).
 미니미의 판단·발언·검증·회의록은 매번 실제 모듈이 만든다. 대사만 대본이다.
 
 속도: 각 단계는 앞 단계의 미니미 답이 실제로 나올 때까지 기다린 뒤, 발표자가 설명할 시간(hold)만큼 쉰다.
@@ -19,25 +19,25 @@ from .store import hub
 
 log = logging.getLogger("minime")
 
-LIVE_UIDS = {"jw", "hj", "jm", "dj"}          # seed.seed_live_room 의 팀원
-PRESENTER = "dj"
+LIVE_UIDS = {"mj", "jy", "hr", "dy"}          # seed.seed_live_room 의 팀원
+PRESENTER = "dy"
 START_DELAY = 4.0                             # 대리 참석 안내가 뜨고 첫 대사까지
 SPEED = float(os.getenv("LIVE_AUTOPLAY_SPEED", "1.0") or 1.0)   # hold 배율 (1.0 = 대본 속도)
 ENABLED = os.getenv("LIVE_AUTOPLAY", "1") != "0"
 
 LINES = {
     "a": "나는 공연이 축제의 얼굴이라 A안이 현실적이라고 봐.",
-    "ask": "동준 미니미, 무대 음향 장비 대여 업체는 알아봤어?",
+    "ask": "도윤 미니미, 무대 음향 장비 대여 업체는 알아봤어?",
     "b": "결론적으로 B안으로 가자. 학생 참여 프로그램이 만족도가 항상 더 높으니까 확실해.",
-    "role": "좋아. 발표 역할은 내가 사회, 정민이가 본론 발표, 혜중이가 자료 설명, 동준이가 질의응답 맡는 걸로 하자.",
+    "role": "좋아. 발표 역할은 내가 사회, 하린이가 본론 발표, 지연이가 자료 설명, 도윤이가 질의응답 맡는 걸로 하자.",
 }
 # hold = 이 단계가 끝난 뒤 발표자 설명 시간(초)
 STEPS = [
-    {"label": "종원: A안 의견 → 동준 미니미 반론", "say": ("jw", LINES["a"]), "hold": 18},
-    {"label": "정민: 동준 미니미에게 모르는 걸 질문", "say": ("jm", LINES["ask"]), "hold": 8},
-    {"label": "정민: B안으로 결론 → 결정 보류", "say": ("jm", LINES["b"]), "hold": 2},
-    {"label": "정민: 내 미니미에게 2차 검증", "verify": ("jm", "결론적으로 B안"), "hold": 24},
-    {"label": "종원: 발표 역할 정하기 → 결정 보류", "say": ("jw", LINES["role"]), "hold": 0},
+    {"label": "민준: A안 의견 → 도윤 미니미 반론", "say": ("mj", LINES["a"]), "hold": 18},
+    {"label": "하린: 도윤 미니미에게 모르는 걸 질문", "say": ("hr", LINES["ask"]), "hold": 8},
+    {"label": "하린: B안으로 결론 → 결정 보류", "say": ("hr", LINES["b"]), "hold": 2},
+    {"label": "하린: 내 미니미에게 2차 검증", "verify": ("hr", "결론적으로 B안"), "hold": 24},
+    {"label": "민준: 발표 역할 정하기 → 결정 보류", "say": ("mj", LINES["role"]), "hold": 0},
 ]
 # 회의 종료는 자동으로 하지 않는다: 끝난 회의에서는 미니미가 답하지 않아서, 남는 시간에 기능을 더 보여 줄 수 없다.
 # 마지막에 공유 화면에서 [⋯] → [회의 종료 · 회의록]을 직접 누른다.
@@ -63,7 +63,7 @@ async def _emit(room_id: str, **kw) -> None:
 
 
 def maybe_start(room_id: str) -> None:
-    """동준의 대리 참석이 켜졌을 때 orchestrator 가 부른다. 방마다 한 번만."""
+    """도윤의 대리 참석이 켜졌을 때 orchestrator 가 부른다. 방마다 한 번만."""
     room = hub.room(room_id)
     if not ENABLED or not is_live_room(room):
         return
@@ -157,8 +157,8 @@ async def _run(room_id: str) -> None:
 
 
 async def presenter_back(room_id: str) -> None:
-    """동준이 일찍 돌아오면 남은 자동 진행은 멈춘다 (돌아온 뒤에 대사가 계속 나가지 않게)."""
+    """도윤이 일찍 돌아오면 남은 자동 진행은 멈춘다 (돌아온 뒤에 대사가 계속 나가지 않게)."""
     st = _state.get(room_id)
     if st and st.get("status") in ("running", "paused"):
         stop(room_id)
-        await _emit(room_id, status="done", label="동준이 돌아와서 자동 진행을 마쳤어요", next_label="", until=0)
+        await _emit(room_id, status="done", label="도윤이 돌아와서 자동 진행을 마쳤어요", next_label="", until=0)

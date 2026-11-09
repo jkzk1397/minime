@@ -26,17 +26,17 @@ def _fresh(room_id: str) -> Room:
 async def _called_survives():
     rid = "t-called"
     room = _fresh(rid)
-    await orchestrator.set_away(rid, "dongjun", True)
-    await orchestrator.set_away(rid, "hyejung", True)
-    m1, t1 = await orchestrator.handle_human(rid, "jongwon", "동준 미니미, 타 대학 사례는 어떤 게 있어?")
-    m2, t2 = await orchestrator.handle_human(rid, "jungmin", "혜중 미니미, 무대 음향 장비 대여 업체는 알아봤어?")
-    m3, t3 = await orchestrator.handle_human(rid, "jongwon", "좋아 그건 나중에 다시 보자")
+    await orchestrator.set_away(rid, "doyun", True)
+    await orchestrator.set_away(rid, "jiyeon", True)
+    m1, t1 = await orchestrator.handle_human(rid, "minjun", "도윤 미니미, 타 대학 사례는 어떤 게 있어?")
+    m2, t2 = await orchestrator.handle_human(rid, "harin", "지연 미니미, 무대 음향 장비 대여 업체는 알아봤어?")
+    m3, t3 = await orchestrator.handle_human(rid, "minjun", "좋아 그건 나중에 다시 보자")
     await asyncio.gather(t1, t2, t3)
     r1 = [m for m in room.messages if m.kind == "mini" and m.meta.get("reply_to") == m1.id]
     r2 = [m for m in room.messages if m.kind == "mini" and m.meta.get("reply_to") == m2.id]
-    assert r1 and r1[0].user_id == "dongjun" and r1[0].meta.get("called") and not r1[0].meta.get("abstain")
+    assert r1 and r1[0].user_id == "doyun" and r1[0].meta.get("called") and not r1[0].meta.get("abstain")
     assert r2 and r2[0].meta.get("abstain") == "no_evidence"
-    assert [q.text for q in room.personas["hyejung"].questions] == [m2.text]       # 복귀 후 질문도 남는다
+    assert [q.text for q in room.personas["jiyeon"].questions] == [m2.text]       # 복귀 후 질문도 남는다
 
 
 def test_called_mini_reply_survives_newer_message():
@@ -48,8 +48,8 @@ async def _gen_order():
     rid = "t-gen"
     room = _fresh(rid)
     (ma, ta), (mb, tb) = await asyncio.gather(
-        orchestrator.handle_human(rid, "jongwon", "예산은 공연 중심이 현실적이라고 봐"),
-        orchestrator.handle_human(rid, "jungmin", "참여 프로그램 쪽 자료도 같이 보자"))
+        orchestrator.handle_human(rid, "minjun", "예산은 공연 중심이 현실적이라고 봐"),
+        orchestrator.handle_human(rid, "harin", "참여 프로그램 쪽 자료도 같이 보자"))
     await asyncio.wait({ta, tb})
     assert [m.id for m in room.messages if m.kind == "human"] == [ma.id, mb.id]   # 도착 순서대로
     assert hub.tasks[rid] is tb and not tb.cancelled()
@@ -64,14 +64,14 @@ def test_generation_taken_before_awaits():
 async def _after_end():
     rid = "t-end"
     room = _fresh(rid)
-    _, t = await orchestrator.handle_human(rid, "jongwon", "예산은 A안이 현실적이라고 봐")
+    _, t = await orchestrator.handle_human(rid, "minjun", "예산은 A안이 현실적이라고 봐")
     await t
     r1, r2 = await asyncio.gather(orchestrator.end_meeting(rid), orchestrator.end_meeting(rid))
     assert (r1 is None) != (r2 is None)                                             # 두 번 눌러도 한 번만
     assert sum(1 for m in room.messages if m.kind == "result") == 1
     kept = room.minutes
     assert kept and room.meeting["status"] == "ended"
-    msg, t = await orchestrator.handle_human(rid, "jungmin", "다들 수고했어")
+    msg, t = await orchestrator.handle_human(rid, "harin", "다들 수고했어")
     await t
     assert msg.meta.get("after_end") and msg in room.messages
     assert room.meeting["status"] == "ended" and room.minutes is kept               # 회의록이 지워지지 않는다
@@ -164,16 +164,16 @@ def test_members_payload_survives_join(monkeypatch):
 async def _pipeline_error(monkeypatch):
     rid = "t-err"
     room = _fresh(rid)
-    await orchestrator.set_away(rid, "dongjun", True)
+    await orchestrator.set_away(rid, "doyun", True)
 
     async def boom(*a, **k):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(gate, "evaluate", boom)
-    _, t = await orchestrator.handle_human(rid, "jongwon", "동준 미니미, 타 대학 사례는 어떤 게 있어?")
+    _, t = await orchestrator.handle_human(rid, "minjun", "도윤 미니미, 타 대학 사례는 어떤 게 있어?")
     await t
     notes = [m for m in room.messages if m.kind == "system" and m.meta.get("event") == "mini_error"]
-    assert notes and "동준" in notes[0].text
+    assert notes and "도윤" in notes[0].text
 
 
 def test_pipeline_error_is_logged_and_noticed(monkeypatch, caplog):
@@ -186,21 +186,21 @@ def test_pipeline_error_is_logged_and_noticed(monkeypatch, caplog):
 async def _answer_twice():
     rid = "t-answer"
     room = _fresh(rid)
-    await orchestrator.set_away(rid, "hyejung", True)
-    _, t = await orchestrator.handle_human(rid, "jungmin", "혜중 미니미, 무대 음향 장비 대여 업체는 알아봤어?")
+    await orchestrator.set_away(rid, "jiyeon", True)
+    _, t = await orchestrator.handle_human(rid, "harin", "지연 미니미, 무대 음향 장비 대여 업체는 알아봤어?")
     await t
-    p = room.personas["hyejung"]
+    p = room.personas["jiyeon"]
     q = p.questions[0]
-    await orchestrator.set_away(rid, "hyejung", False)
-    assert [x["id"] for x in orchestrator.fresh_digest(room, "hyejung")["questions"]] == [q.id]
-    await orchestrator.answer_question(rid, "hyejung", q.id, "아직 안 알아봤어")
+    await orchestrator.set_away(rid, "jiyeon", False)
+    assert [x["id"] for x in orchestrator.fresh_digest(room, "jiyeon")["questions"]] == [q.id]
+    await orchestrator.answer_question(rid, "jiyeon", q.id, "아직 안 알아봤어")
     n_st, n_msg = len(p.stances), len(room.messages)
     with pytest.raises(ValueError):
-        await orchestrator.answer_question(rid, "hyejung", q.id, "다시 답할게")
+        await orchestrator.answer_question(rid, "jiyeon", q.id, "다시 답할게")
     assert len(p.stances) == n_st and len(room.messages) == n_msg
-    assert orchestrator.fresh_digest(room, "hyejung")["questions"] == []              # 다시 열어도 답한 질문은 없다
+    assert orchestrator.fresh_digest(room, "jiyeon")["questions"] == []              # 다시 열어도 답한 질문은 없다
     with pytest.raises(KeyError):
-        await orchestrator.answer_question(rid, "hyejung", "nope", "답")
+        await orchestrator.answer_question(rid, "jiyeon", "nope", "답")
 
 
 def test_question_cannot_be_answered_twice():
@@ -210,16 +210,16 @@ def test_question_cannot_be_answered_twice():
 # ---------------------------------------------------------------- 결정 응답 권한 (#11, #14)
 def test_decision_respond_permissions():
     room = seed.fresh_room("t-resp")
-    d = Decision("d1", "B안으로", "i1", "jungmin", "pending", ["hyejung"])
+    d = Decision("d1", "B안으로", "i1", "harin", "pending", ["jiyeon"])
     room.decisions.append(d)
     with pytest.raises(ValueError):
-        minutes.respond(room, "d1", "jongwon", "object")                            # 확인 대상이 아님
+        minutes.respond(room, "d1", "minjun", "object")                            # 확인 대상이 아님
     assert d.status == "pending" and not d.responses
-    minutes.respond(room, "d1", "hyejung", "approve")
+    minutes.respond(room, "d1", "jiyeon", "approve")
     assert d.status == "confirmed"
-    nc = Decision("d2", "회의는 매주 하기로", "", "jungmin", "needs_check", [])
+    nc = Decision("d2", "회의는 매주 하기로", "", "harin", "needs_check", [])
     room.decisions.append(nc)
-    minutes.respond(room, "d2", "jongwon", "approve")                               # '확인 필요'는 팀원 누구나
+    minutes.respond(room, "d2", "minjun", "approve")                               # '확인 필요'는 팀원 누구나
     assert nc.status == "confirmed"
 
 
@@ -227,33 +227,33 @@ def test_decision_naming_absent_member_needs_their_ok():
     """준비가 안 된 불참자라도 결정 문장에서 이름이 불리면(역할을 맡기는 등) 확인 대상이 된다."""
     async def go():
         rid = "t-named"
-        room = _fresh(rid)                                         # 혜중은 보고서·입장 카드가 없는 상태
-        await orchestrator.set_away(rid, "hyejung", True)
-        await orchestrator.set_away(rid, "dongjun", True)
-        m, t = await orchestrator.handle_human(rid, "jongwon", "좋아. 발표 역할은 내가 사회랑 도입, 정민이가 본론, 혜중이가 질의응답 근거 정리하는 걸로 하자.")
+        room = _fresh(rid)                                         # 지연은 보고서·입장 카드가 없는 상태
+        await orchestrator.set_away(rid, "jiyeon", True)
+        await orchestrator.set_away(rid, "doyun", True)
+        m, t = await orchestrator.handle_human(rid, "minjun", "좋아. 발표 역할은 내가 사회랑 도입, 하린이가 본론, 지연이가 질의응답 근거 정리하는 걸로 하자.")
         await t
         d = next(x for x in room.decisions if x.source_msg == m.id)
-        assert "hyejung" in d.affected and d.status == "pending"
+        assert "jiyeon" in d.affected and d.status == "pending"
     asyncio.run(go())
 
 
 def test_example_only_in_scenario_rooms():
     room = seed.fresh_room("t-ex")
-    ex = seed.example_for(room, "hyejung")
+    ex = seed.example_for(room, "jiyeon")
     assert ex and ex["report_text"] and ex["answers"]["i1"]
-    assert seed.example_for(room, "jongwon") is None
+    assert seed.example_for(room, "minjun") is None
     room.issues = room.issues[:1]                                  # 쟁점을 바꾼 방(실제 방)에는 예시가 없다
-    assert seed.example_for(room, "hyejung") is None
+    assert seed.example_for(room, "jiyeon") is None
 
 
 def test_minutes_refresh_reads_live_decisions():
     room = seed.fresh_room("t-refresh")
-    d = Decision("d1", "B안으로", "i1", "jungmin", "pending", ["hyejung"])
+    d = Decision("d1", "B안으로", "i1", "harin", "pending", ["jiyeon"])
     room.decisions.append(d)
     data = {"issues": [{"issue_id": "i1", "status": "pending", "decision": minutes.decision_dict(room, d)}],
             "loose_decisions": []}
     assert not minutes.refresh_decisions(room, data)
-    minutes.respond(room, "d1", "hyejung", "object")
+    minutes.respond(room, "d1", "jiyeon", "object")
     assert minutes.refresh_decisions(room, data)
     assert data["issues"][0]["status"] == "objected" and data["issues"][0]["decision"]["status"] == "objected"
 

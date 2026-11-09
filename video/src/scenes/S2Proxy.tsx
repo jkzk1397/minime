@@ -33,7 +33,7 @@ export const EvidenceLine: React.FC<{ color: string; progress: number; children:
   </div>
 );
 
-// 한 가지 사례만: 종원이 A안을 꺼내자, 혜중의 미니미가 보고서 근거로 답한다
+// 한 가지 사례만: 민준이 A안을 꺼내자, 지연의 미니미가 보고서 근거로 답한다
 export const S2Proxy: React.FC = () => {
   const frame = useCurrentFrame();
   return (
@@ -41,16 +41,16 @@ export const S2Proxy: React.FC = () => {
       <Stage>
         <Caption step="02" text={CAPTIONS.proxy} />
         <MeetingTable
-          seats={{ jongwon: "person", hyejung: "minime", jungmin: "person", dongjun: "minime" }}
-          at={{ jongwon: 4, hyejung: 8, jungmin: 12, dongjun: 16 }}
+          seats={{ minjun: "person", jiyeon: "minime", harin: "person", doyun: "minime" }}
+          at={{ minjun: 4, jiyeon: 8, harin: 12, doyun: 16 }}
         />
-        <Bubble who="jongwon" at={26} tail="bottom-right" size={44} style={{ right: 1920 - 650, top: 290 }}>
-          {LINES.jongwon}
+        <Bubble who="minjun" at={26} tail="bottom-right" size={44} style={{ right: 1920 - 650, top: 290 }}>
+          {LINES.minjun}
         </Bubble>
-        <Bubble who="hyejung" mini at={62} tail="bottom-left" size={44} style={{ left: 1260, top: 240 }}>
-          {LINES.hyejungMini}
-          <EvidenceLine color={PEOPLE.hyejung.color} progress={prog(frame, 80, 22)}>
-            {LINES.hyejungEvidence}
+        <Bubble who="jiyeon" mini at={62} tail="bottom-left" size={44} style={{ left: 1260, top: 240 }}>
+          {LINES.jiyeonMini}
+          <EvidenceLine color={PEOPLE.jiyeon.color} progress={prog(frame, 80, 22)}>
+            {LINES.jiyeonEvidence}
           </EvidenceLine>
         </Bubble>
       </Stage>

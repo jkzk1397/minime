@@ -9,10 +9,10 @@ export type SeatKind = "person" | "minime" | "empty" | "none";
 
 /** 자리 좌표 (1920×1080 기준). 위쪽 줄은 탁자 뒤, 아래쪽 줄은 탁자 앞 */
 export const SEATS: Record<PersonId, { x: number; y: number; row: "top" | "bottom" }> = {
-  jongwon: { x: 760, y: 588, row: "top" },
-  hyejung: { x: 1160, y: 588, row: "top" },
-  jungmin: { x: 760, y: 930, row: "bottom" },
-  dongjun: { x: 1160, y: 930, row: "bottom" },
+  minjun: { x: 760, y: 588, row: "top" },
+  jiyeon: { x: 1160, y: 588, row: "top" },
+  harin: { x: 760, y: 930, row: "bottom" },
+  doyun: { x: 1160, y: 930, row: "bottom" },
 };
 export const TABLE = { x: 560, y: 590, w: 800, h: 150 };
 

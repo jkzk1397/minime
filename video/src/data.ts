@@ -1,12 +1,12 @@
 // 이름·색·자막·대사는 여기서만 고치면 된다.
 
-export type PersonId = "jongwon" | "hyejung" | "jungmin" | "dongjun";
+export type PersonId = "minjun" | "jiyeon" | "harin" | "doyun";
 
 export const PEOPLE: Record<PersonId, { name: string; color: string }> = {
-  jongwon: { name: "종원", color: "#4f63e6" },
-  hyejung: { name: "혜중", color: "#c24c19" },
-  jungmin: { name: "정민", color: "#14855f" },
-  dongjun: { name: "동준", color: "#d23c72" },
+  minjun: { name: "민준", color: "#4f63e6" },
+  jiyeon: { name: "지연", color: "#c24c19" },
+  harin: { name: "하린", color: "#14855f" },
+  doyun: { name: "도윤", color: "#d23c72" },
 };
 
 export const CAPTIONS = {
@@ -24,15 +24,15 @@ export const LINES = {
   report: "보고서",
   interview: "3분 인터뷰",
   ready: "준비 완료",
-  jongwon: "A안이 낫지 않아?",
-  hyejungMini: "B안이요!",
-  hyejungEvidence: "만족도 4.2 > 3.6",
-  jungminAsk: "음향 업체는 알아봤어?",
+  minjun: "A안이 낫지 않아?",
+  jiyeonMini: "B안이요!",
+  jiyeonEvidence: "만족도 4.2 > 3.6",
+  harinAsk: "음향 업체는 알아봤어?",
   noEvidence: "근거 없음",
-  silent: "혜중에게 물어볼게요",
+  silent: "지연에게 물어볼게요",
   decision: "B안으로 확정!",
   hold: "보류",
-  holdSub: "혜중·동준 확인 필요",
+  holdSub: "지연·도윤 확인 필요",
   confirmed: "확정",
 };
 

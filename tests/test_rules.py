@@ -11,15 +11,15 @@ def test_polite_and_casual():
 
 
 def test_question_kind_and_mentions():
-    assert ko.question_kind("혜중 미니미, 무대 음향 장비 대여 업체는 알아봤어?") == "fact"
-    assert ko.question_kind("동준이 생각은 어때?") == "opinion"
+    assert ko.question_kind("지연 미니미, 무대 음향 장비 대여 업체는 알아봤어?") == "fact"
+    assert ko.question_kind("도윤이 생각은 어때?") == "opinion"
     assert ko.question_kind("발표에서 맡고 싶은 역할이 뭐야?") == "opinion"
     assert ko.question_kind("좋아. 그렇게 하자") == ""
-    names = {"hyejung": "혜중", "dongjun": "동준"}
-    assert ko.addressed_mini("@혜중 예산 어때?", names) == ["hyejung"]
-    assert ko.mentions("동준아 리허설 날짜 정해 줄 수 있지?", names) == ["dongjun"]
-    assert ko.COMMIT.search("동준아 리허설 날짜는 네가 정해 줄 수 있지?")
-    assert ko.strip_address("동준 미니미, 타 대학 사례는 어떤 게 있어?", list(names.values())).startswith(", 타 대학")
+    names = {"jiyeon": "지연", "doyun": "도윤"}
+    assert ko.addressed_mini("@지연 예산 어때?", names) == ["jiyeon"]
+    assert ko.mentions("도윤아 리허설 날짜 정해 줄 수 있지?", names) == ["doyun"]
+    assert ko.COMMIT.search("도윤아 리허설 날짜는 네가 정해 줄 수 있지?")
+    assert ko.strip_address("도윤 미니미, 타 대학 사례는 어떤 게 있어?", list(names.values())).startswith(", 타 대학")
 
 
 def test_numbers():
@@ -35,7 +35,7 @@ def test_position_and_issue():
     assert agenda.detect_position(i1, "무대 음향 장비 대여 업체는 알아봤어?") == ""        # 단서어만으론 입장 아님
     assert agenda.stance_position(seed.ISSUES[1], "타 대학 사례는 어떤 게 있어?") == ""   # 질문은 입장 아님
     room = seed.fresh_room("t-rules")
-    assert agenda.detect_issue(room, "동준아 리허설 날짜는 네가 정해 줄 수 있지?")[0] == "i3"
+    assert agenda.detect_issue(room, "도윤아 리허설 날짜는 네가 정해 줄 수 있지?")[0] == "i3"
     assert agenda.detect_issue(room, "설문으로 할까 사례 조사로 할까")[0] == "i2"
 
 

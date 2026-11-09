@@ -7,14 +7,11 @@ import { S2Proxy } from "./scenes/S2Proxy";
 import { S3Silence } from "./scenes/S3Silence";
 import { S4Confirm } from "./scenes/S4Confirm";
 import { S6Ending } from "./scenes/S6Ending";
-import { PhotoContext } from "./components/characters";
 
 // 장면 길이 합 820 − 전환 12 × 5 = 760프레임(약 25초)
-// photos=false → 실루엣, true → 팀원 사진
-export const MinimeVideo: React.FC<{ photos?: boolean }> = ({
-  photos = false,
-}) => (
-  <PhotoContext.Provider value={photos}>
+// 등장인물은 모두 가상 인물이고 사람 색 실루엣으로만 그린다 (실제 사진 없음)
+export const MinimeVideo: React.FC = () => (
+  <>
     <TransitionSeries>
       <TransitionSeries.Sequence
         name="00 인트로: 미니미 탄생"
@@ -64,5 +61,5 @@ export const MinimeVideo: React.FC<{ photos?: boolean }> = ({
         <S6Ending />
       </TransitionSeries.Sequence>
     </TransitionSeries>
-  </PhotoContext.Provider>
+  </>
 );

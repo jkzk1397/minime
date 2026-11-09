@@ -1,13 +1,10 @@
 import React from "react";
-import { Img, staticFile, useCurrentFrame } from "remotion";
+import { useCurrentFrame } from "remotion";
 import { C, tint } from "../theme";
 import { PEOPLE, PersonId } from "../data";
 import { mix, popIn, prog } from "../anim";
 
 /* ------------------------------------------------------------------ 사람 실루엣 */
-
-/** 사진을 쓸지(true) 실루엣을 쓸지(false). MinimeVideo의 photos prop으로 정한다 */
-export const PhotoContext = React.createContext(false);
 
 /** 머리 + 어깨 실루엣 (사람 색) */
 const Silhouette: React.FC<{ who: PersonId; size: number; dim: number }> = ({
@@ -29,7 +26,7 @@ const Silhouette: React.FC<{ who: PersonId; size: number; dim: number }> = ({
   </svg>
 );
 
-/** 팀원: 실루엣 또는 사진(배경 없는 컷아웃). size = 높이(px) */
+/** 팀원: 사람 색 실루엣 (실제 사진은 쓰지 않는다). size = 높이(px) */
 export const Person: React.FC<{
   who: PersonId;
   size?: number;
@@ -38,7 +35,6 @@ export const Person: React.FC<{
   dim?: number;
 }> = ({ who, size = 200, label = false, style, dim = 0 }) => {
   const p = PEOPLE[who];
-  const photos = React.useContext(PhotoContext);
   return (
     <div
       style={{
@@ -49,21 +45,7 @@ export const Person: React.FC<{
         ...style,
       }}
     >
-      {photos ? (
-        <Img
-          src={staticFile(`people/${who}.png`)}
-          style={{
-            height: size,
-            width: "auto",
-            opacity: 1 - dim * 0.6,
-            maskImage: "linear-gradient(to bottom, #000 78%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to bottom, #000 78%, transparent 100%)",
-          }}
-        />
-      ) : (
-        <Silhouette who={who} size={size} dim={dim} />
-      )}
+      <Silhouette who={who} size={size} dim={dim} />
       {label ? (
         <div
           style={{
@@ -80,13 +62,12 @@ export const Person: React.FC<{
   );
 };
 
-/** 동그란 아바타: 사진이면 얼굴, 아니면 사람 색 원 안에 작은 실루엣 */
+/** 동그란 아바타: 사람 색 원 안에 작은 실루엣 */
 export const Face: React.FC<{
   who: PersonId;
   size?: number;
   style?: React.CSSProperties;
 }> = ({ who, size = 64, style }) => {
-  const photos = React.useContext(PhotoContext);
   return (
     <div
       style={{
@@ -100,24 +81,17 @@ export const Face: React.FC<{
         ...style,
       }}
     >
-      {photos ? (
-        <Img
-          src={staticFile(`people/${who}-face.png`)}
-          style={{ width: "100%", height: "100%", display: "block" }}
-        />
-      ) : (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "grid",
-            placeItems: "end center",
-            background: "#fff",
-          }}
-        >
-          <Silhouette who={who} size={size * 0.85} dim={0} />
-        </div>
-      )}
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "grid",
+          placeItems: "end center",
+          background: "#fff",
+        }}
+      >
+        <Silhouette who={who} size={size * 0.85} dim={0} />
+      </div>
     </div>
   );
 };

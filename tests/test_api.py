@@ -80,5 +80,5 @@ def test_demo_scenes_run():
                 time.sleep(0.05)
             assert st["status"] == "done", st
         room = c.get("/api/rooms/demo").json()
-        hyejung = next(m for m in room["members"]["members"] if m["user_id"] == "hyejung")
-        assert hyejung["readiness"]["ready"] and hyejung["mini_on"]
+        jiyeon = next(m for m in room["members"]["members"] if m["user_id"] == "jiyeon")
+        assert jiyeon["readiness"]["ready"] and jiyeon["mini_on"]

@@ -12,8 +12,7 @@ const base = { width: 1920, height: 1080, fps: 30 } as const;
 
 export const RemotionRoot: React.FC = () => (
   <>
-    <Composition id="MinimeIntro" component={MinimeVideo} durationInFrames={760} defaultProps={{ photos: false }} {...base} />
-    <Composition id="MinimeIntroPhoto" component={MinimeVideo} durationInFrames={760} defaultProps={{ photos: true }} {...base} />
+    <Composition id="MinimeIntro" component={MinimeVideo} durationInFrames={760} {...base} />
     <Folder name="Scenes">
       <Composition id="S0-Intro" component={S0Intro} durationInFrames={150} {...base} />
       <Composition id="S1-Prepare" component={S1Prepare} durationInFrames={140} {...base} />

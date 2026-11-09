@@ -20,11 +20,11 @@ export const S3Silence: React.FC = () => {
       <Stage>
         <Caption step="03" text={CAPTIONS.silence} />
         <MeetingTable
-          seats={{ jongwon: "person", hyejung: "minime", jungmin: "person", dongjun: "minime" }}
-          mouth={{ hyejung: frame >= 42 ? "zip" : "none" }}
+          seats={{ minjun: "person", jiyeon: "minime", harin: "person", doyun: "minime" }}
+          mouth={{ jiyeon: frame >= 42 ? "zip" : "none" }}
         />
-        <Bubble who="jungmin" at={8} tail="top-right" size={44} style={{ right: 1920 - 650, top: 760 }}>
-          {LINES.jungminAsk}
+        <Bubble who="harin" at={8} tail="top-right" size={44} style={{ right: 1920 - 650, top: 760 }}>
+          {LINES.harinAsk}
         </Bubble>
         <At x={1420} y={300} anchor="center" style={{ opacity: Math.min(1, none * 1.5), scale: `${mix(none, 1.6, 1)}` }}>
           <Tag tone="bad" size={42}>
@@ -32,7 +32,7 @@ export const S3Silence: React.FC = () => {
             {LINES.noEvidence}
           </Tag>
         </At>
-        <Bubble who="hyejung" mini at={66} tail="bottom-left" size={44} style={{ left: 1260, top: 380 }}>
+        <Bubble who="jiyeon" mini at={66} tail="bottom-left" size={44} style={{ left: 1260, top: 380 }}>
           {LINES.silent}
         </Bubble>
       </Stage>

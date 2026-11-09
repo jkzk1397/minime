@@ -72,13 +72,13 @@ def test_force_rule_switch(engines):
 
 def test_citation_check_drops_hallucination(engines):
     room = seed.fresh_room("t-llm")
-    msg = Message("human", "나는 A안이 현실적이라고 봐", "jongwon", issue_id="i1")
+    msg = Message("human", "나는 A안이 현실적이라고 봐", "minjun", issue_id="i1")
     room.messages.append(msg)
 
     async def go():
-        idx = await persona.get_index(room, "dongjun")
+        idx = await persona.get_index(room, "doyun")
         hits = await idx.search(msg.text, k=5)
-        return await persona.compose(room, "dongjun", msg, "rebuttal", "i1", hits)
+        return await persona.compose(room, "doyun", msg, "rebuttal", "i1", hits)
     out = asyncio.run(go())
     assert out["engine"].startswith("ollama")
     assert out["dropped"] == 1                                              # '화성 이주' 문장은 지워진다

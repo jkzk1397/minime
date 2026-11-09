@@ -4,7 +4,6 @@
 npm i
 npm run dev                                  # 스튜디오에서 미리보기 (MinimeIntro, Scenes 폴더에 장면별)
 npx remotion render MinimeIntro out/minime-intro-silhouette.mp4    # 실루엣 버전
-npx remotion render MinimeIntroPhoto out/minime-intro-photo.mp4    # 팀원 사진 버전
 ```
 
 - 자막·대사: `src/data.ts`, 장면 길이: `src/MinimeVideo.tsx`

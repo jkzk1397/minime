@@ -12,7 +12,7 @@ ensureFonts();
 
 const HOLD_AT = 36;
 const BACK_AT = 84;
-const OK_AT: Record<"hyejung" | "dongjun", number> = { hyejung: 108, dongjun: 124 };
+const OK_AT: Record<"jiyeon" | "doyun", number> = { jiyeon: 108, doyun: 124 };
 const FINAL_AT = 146;
 
 const Stamp: React.FC<{ at: number; out?: number; color: string; bg: string; children: React.ReactNode }> = ({ at, out, color, bg, children }) => {
@@ -43,9 +43,9 @@ const Stamp: React.FC<{ at: number; out?: number; color: string; bg: string; chi
   );
 };
 
-const Returner: React.FC<{ who: "hyejung" | "dongjun"; x: number }> = ({ who, x }) => {
+const Returner: React.FC<{ who: "jiyeon" | "doyun"; x: number }> = ({ who, x }) => {
   const frame = useCurrentFrame();
-  const t = popIn(frame, BACK_AT + (who === "dongjun" ? 6 : 0), 16);
+  const t = popIn(frame, BACK_AT + (who === "doyun" ? 6 : 0), 16);
   const ok = popIn(frame, OK_AT[who], 12);
   return (
     <At x={x} y={720} anchor="top" style={{ opacity: Math.min(1, t * 1.5), scale: `${mix(t, 0.6, 1)}` }}>
@@ -87,7 +87,7 @@ export const S4Confirm: React.FC = () => {
               position: "relative",
             }}
           >
-            <Person who="jungmin" size={180} style={{ marginTop: 20 }} />
+            <Person who="harin" size={180} style={{ marginTop: 20 }} />
             <div style={{ fontSize: 76, fontWeight: 700, letterSpacing: "-0.04em" }}>{LINES.decision}</div>
             <Stamp at={HOLD_AT} out={FINAL_AT - 4} color={C.warn} bg="rgba(252,241,220,.94)">
               {LINES.hold}
@@ -101,23 +101,23 @@ export const S4Confirm: React.FC = () => {
         {/* 기다리는 중 */}
         <At x={960} y={700} anchor="top" style={{ opacity: Math.min(1, waiting * 1.5) }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 42, fontWeight: 700, color: C.ink2 }}>
-            <Minime who="hyejung" size={80} />
-            <Minime who="dongjun" size={80} />
+            <Minime who="jiyeon" size={80} />
+            <Minime who="doyun" size={80} />
             {LINES.holdSub}
           </div>
         </At>
 
         {/* 돌아와서 확인 */}
-        <Returner who="hyejung" x={800} />
-        <Returner who="dongjun" x={1120} />
+        <Returner who="jiyeon" x={800} />
+        <Returner who="doyun" x={1120} />
       </Stage>
 
       <Sfx at={6} name="pop" volume={0.4} />
       <Sfx at={HOLD_AT} name="stamp" volume={0.55} />
       <Sfx at={BACK_AT} name="soft-pop" volume={0.4} />
       <Sfx at={BACK_AT + 6} name="soft-pop" volume={0.35} />
-      <Sfx at={OK_AT.hyejung} name="click" volume={0.7} />
-      <Sfx at={OK_AT.dongjun} name="click" volume={0.7} />
+      <Sfx at={OK_AT.jiyeon} name="click" volume={0.7} />
+      <Sfx at={OK_AT.doyun} name="click" volume={0.7} />
       <Sfx at={FINAL_AT} name="stamp" volume={0.5} />
       <Sfx at={FINAL_AT + 2} name="confirm" volume={0.5} />
     </AbsoluteFill>

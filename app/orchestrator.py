@@ -37,6 +37,11 @@ async def members_payload(room_id: str) -> dict:
             "readiness": {k: r[k] for k in ("covered", "total", "ready", "confirmed")},
             "readiness_items": r["items"], "stances": len(p.confirmed()), "reports": len(p.reports),
             "open_questions": sum(1 for q in p.questions if q.status == "open"),
+            "consent": {"ok": (p.consent or {}).get("version") == config.CONSENT_VERSION
+                              and bool((p.consent or {}).get("service")),
+                        "use_reports": persona.allowed(p, "use_reports"),
+                        "store_utterances": persona.allowed(p, "store_utterances")},
+            "memos": sum(1 for s in p.stances if s.origin == "memo" and s.status == "confirmed"),
         })
     return {"type": "members", "members": out, "observers": hub.observers(room_id)}
 
@@ -249,6 +254,8 @@ async def post_decision(room_id: str, d) -> None:
         text = f"확인이 필요한 결정: {d.text} — 어느 쟁점인지 확인해 주세요."
     else:
         text = f"결정: {d.text}"
+    if dd.get("dissent_names"):
+        text += f" (다른 입장: {', '.join(dd['dissent_names'])})"
     await hub.post(room_id, Message("decision", text, d.by, meta={"decision": dd}, issue_id=d.issue_id))
 
 
@@ -279,6 +286,9 @@ async def _pipeline(room_id: str, msg: Message, gen: int, issue_id: str, positio
                                                       "distance": rem["distance"]}))
                 reminded = True
 
+        if not stale() or called:
+            await _deliver_memos(room_id, msg, issue_id)
+
         decision = await gate.evaluate(room, msg, issue_id, position, hub.someone_typing(room_id))
         hits = decision.pop("_hits")
         if stale() and not called:
@@ -307,6 +317,64 @@ async def _pipeline(room_id: str, msg: Message, gen: int, issue_id: str, positio
         await _soft_error(room_id, sorted(gate.called_uids(room, msg.text, msg.user_id)) if called else [])
     finally:
         hub.save_soon(room_id)
+
+
+async def _deliver_memos(room_id: str, trigger: Message, issue_id: str) -> None:
+    """전달 메모: 미니미가 고쳐 쓰지 않고 본인이 쓴 그대로 전한다 (출처 = 메모). 회의마다 한 번."""
+    from . import sources
+    room = hub.room(room_id)
+    started = room.meeting.get("started_at") or 0
+    for uid in room.absent():
+        if uid == trigger.user_id:
+            continue
+        p = room.personas[uid]
+        if not persona.allowed(p, "use_reports"):
+            continue
+        memos = sources.memos_to_deliver(room, p, issue_id)
+        if not memos:
+            continue
+        labels = persona.stance_labels(p)
+        for st in memos:
+            p.memo_log[st.id] = started
+        lines = [f"{st.claim.rstrip()} [{labels.get(st.id, '메모')}]" for st in memos]
+        text = f"{p.name} 님이 회의 전에 남긴 메모를 그대로 전해요. " + " ".join(lines)
+        cites = [{"label": labels.get(st.id, "메모"), "kind": "memo", "text": st.claim, "chunk_id": f"{uid}:{st.id}"}
+                 for st in memos]
+        await hub.post(room_id, Message("mini", text, uid, proxy=True, issue_id=issue_id or memos[0].issue_id,
+                                        meta={"act": "memo", "memo": True, "citations": cites, "engine": llm.RULE,
+                                              "reply_to": trigger.id,
+                                              "sentences": [{"text": st.claim, "cites": [labels.get(st.id, "메모")],
+                                                             "support": 1.0, "verifier": "memo"} for st in memos]}))
+        p.last_spoke = time.time()
+
+
+async def review_message(room_id: str, uid: str, msg_id: str, status: str, note: str = "") -> Message:
+    """돌아온 사람이 미니미가 대신 한 말을 확인한다: ok(맞아요) | fix(내 생각과 달라요 + 바로잡을 말).
+    정정한 말은 확인된 입장 카드가 되고, 회의방에도 알려서 그 말을 믿고 있던 팀원이 알 수 있게 한다."""
+    room = hub.room(room_id)
+    p = room.personas[uid]
+    msg = next((m for m in room.messages if m.id == msg_id), None)
+    if msg is None or msg.kind != "mini" or msg.user_id != uid:
+        raise KeyError("내 미니미가 한 말을 찾을 수 없어요.")
+    if status not in ("ok", "fix"):
+        raise ValueError("status는 ok 또는 fix예요.")
+    note = note.strip()[:300]
+    msg.meta["review"] = {"status": status, "note": note, "ts": time.time()}
+    if status == "fix" and note:
+        issue = room.issue(msg.issue_id)
+        st = Stance(new_id("s"), msg.issue_id, note, agenda.stance_position(issue, note) if issue else "", "", "",
+                    ko.red_line(note), "", 1, ["돌아와서 정정"], "candidate", "correction")
+        p.stances.append(st)
+        interview.confirm(p, st.id, True)
+    p.touch()
+    await message_update(room_id, msg)
+    if status == "fix":
+        await system(room_id, f"{p.name} 님이 미니미가 대신 한 말을 바로잡았어요"
+                              + (f": “{note}”" if note else ". 그 말은 근거로 쓰지 말아 주세요."),
+                     event="review_fix", uid=uid, message_id=msg.id)
+    await broadcast_members(room_id)
+    hub.save_soon(room_id)
+    return msg
 
 
 async def _soft_error(room_id: str, called: list[str]) -> None:
@@ -372,6 +440,9 @@ async def set_away(room_id: str, uid: str, on: bool, wait_digest: bool = True) -
     p = room.personas[uid]
     if p.mini_on == on:
         return None
+    if on and not persona.allowed(p, "use_reports"):
+        raise ValueError("미니미가 내 자료와 입장 카드를 근거로 쓰는 데 동의해야 대리 참석을 켤 수 있어요. "
+                         "내 미니미 준비 → 프로필의 '동의 내용'에서 바꿀 수 있어요.")
     p.mini_on = on
     if on:
         p.away_marker = len(room.messages)

@@ -18,19 +18,33 @@ from .retrieval import Chunk, Hit, Index, lexical_support, text_similarity, toke
 SPEECH_KINDS = {"report", "stance", "interview", "profile"}
 
 
+def allowed(p: Persona, key: str) -> bool:
+    """개인정보 동의 확인 (제22조: 항목별 동의). key = service | use_reports | store_utterances.
+    REQUIRE_CONSENT=0(동의 기능 이전에 만든 테스트)이면 항상 허용한다."""
+    if not config.REQUIRE_CONSENT:
+        return True
+    return bool((p.consent or {}).get(key))
+
+
 # ---------------------------------------------------------------- 라벨·청크
 def report_label(p: Persona, ri: int, pi: int) -> str:
-    return f"보고서 {pi + 1}문단" if len(p.reports) <= 1 else f"보고서{ri + 1} {pi + 1}문단"
+    """'보고서 2문단'. 파일에서 쪽(슬라이드) 번호를 알면 'p.3'을 붙여 원문을 바로 찾게 한다."""
+    base = f"보고서 {pi + 1}문단" if len(p.reports) <= 1 else f"보고서{ri + 1} {pi + 1}문단"
+    pages = p.reports[ri].pages if 0 <= ri < len(p.reports) else []
+    return f"{base} p.{pages[pi]}" if pi < len(pages) and pages[pi] else base
 
 
 def stance_labels(p: Persona) -> dict[str, str]:
-    out, n_s, n_i = {}, 0, 0
+    out, n_s, n_i, n_m = {}, 0, 0, 0
     for s in p.stances:
         if s.status != "confirmed":
             continue
         if s.origin == "interview":
             n_i += 1
             out[s.id] = f"인터뷰 {n_i}"
+        elif s.origin == "memo":
+            n_m += 1
+            out[s.id] = f"메모 {n_m}"
         else:
             n_s += 1
             out[s.id] = f"입장 {n_s}"
@@ -50,10 +64,11 @@ def stance_text(s: Stance) -> str:
 
 def speech_chunks(p: Persona) -> list[Chunk]:
     chunks: list[Chunk] = []
-    if p.consent.get("use_reports", True):
-        for ri, r in enumerate(p.reports):
-            for pi, para in enumerate(r.paragraphs):
-                chunks.append(Chunk(f"{p.user_id}:{r.id}:{pi}", p.user_id, "report", report_label(p, ri, pi), para))
+    if not allowed(p, "use_reports"):          # 미니미 근거 자료 사용에 동의하지 않았으면 말할 근거가 없다
+        return chunks
+    for ri, r in enumerate(p.reports):
+        for pi, para in enumerate(r.paragraphs):
+            chunks.append(Chunk(f"{p.user_id}:{r.id}:{pi}", p.user_id, "report", report_label(p, ri, pi), para))
     labels = stance_labels(p)
     for s in p.stances:
         if s.status == "confirmed":
@@ -241,11 +256,28 @@ def _rule_extract(room: Room, report: Report, labels: list[str]) -> list[Stance]
     return out
 
 
-def add_report(room: Room, p: Persona, title: str, text: str) -> Report:
+def split_pages(pages: list[str]) -> tuple[list[str], list[int]]:
+    """쪽(슬라이드)별 글 → 문단 + 문단마다 쪽 번호. 출처 칩에 'p.3'을 붙이기 위해 쓴다."""
+    paras: list[str] = []
+    nums: list[int] = []
+    for n, text in enumerate(pages, 1):
+        for para in split_report(text or ""):
+            if len(paras) >= 40:
+                break
+            paras.append(para)
+            nums.append(n)
+    return paras, nums
+
+
+def add_report(room: Room, p: Persona, title: str, text: str, source: str = "text",
+               pages: list[int] | None = None) -> Report:
     paras = split_report(text)
     if not paras:
         raise ValueError("보고서 내용이 비어 있어요.")
-    rep = Report(new_id("r"), title.strip() or f"보고서 {len(p.reports) + 1}", paras)
+    nums = list(pages or [])
+    if len(nums) != len(paras):
+        nums = []
+    rep = Report(new_id("r"), title.strip() or f"자료 {len(p.reports) + 1}", paras, source=source, pages=nums)
     p.reports.append(rep)
     p.touch()
     return rep
@@ -334,6 +366,8 @@ async def compose(room: Room, uid: str, trigger: Message, act: str, issue_id: st
             sents, dropped, checks = await check_citations(data.get("sentences", []), pool)
         if not sents:
             engine = llm.RULE
+        elif stance and labels.get(stance.id) in pool:
+            sents = keep_red_line(sents, stance, labels[stance.id])
     if not sents:
         sents = _rule_sentences(p, act, trigger.text, stance, labels, hits, pool)
     if not sents:
@@ -379,6 +413,21 @@ async def check_citations(raw: list[dict], pool: dict[str, Chunk]) -> tuple[list
             continue
         kept.append({"text": text, "core": core, "cites": cites, "support": r["score"], "verifier": r["method"]})
     return kept, dropped, checks
+
+
+def keep_red_line(sents: list[dict], stance: Stance, label: str) -> list[dict]:
+    """조건부 입장이 '그냥 찬성'으로 바뀌어 전달되지 않게 한다 (활동 1 위험 항목 3-1).
+    입장 카드에 양보 불가 조건이 있는데 발언 어디에도 그 조건이 없으면, 본인이 확인한 조건 문장을 그대로 덧붙인다.
+    NLI는 '조건이 빠진 찬성'도 입장 카드와 모순되지 않는다고 보므로 따로 막아야 한다."""
+    red = (stance.red_line or "").strip().rstrip(".")
+    if not red:
+        return sents
+    want = set(tokens(red)) - set(tokens(stance.claim)) or set(tokens(red))
+    said = set(tokens(" ".join(s["text"] for s in sents)))
+    if want and len(want & said) / len(want) >= 0.5:
+        return sents
+    return sents[:3] + [{"text": f"다만 {red}", "core": red, "cites": [label], "support": 1.0, "verifier": "guard",
+                         "guard": "red_line"}]
 
 
 def _verify_meta(checks: list[dict]) -> dict:
@@ -466,7 +515,7 @@ def infer_memory(room: Room) -> dict[str, list[Stance]]:
     started = room.meeting.get("started_at") or 0
     out: dict[str, list[Stance]] = {}
     for uid, p in room.personas.items():
-        if not p.consent.get("store_utterances", True):
+        if not allowed(p, "store_utterances"):
             continue
         for issue in room.issues:
             msgs = [m for m in room.messages if m.kind == "human" and m.user_id == uid and m.ts >= started

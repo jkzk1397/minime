@@ -44,6 +44,8 @@ class Report:
     title: str
     paragraphs: list[str]
     ts: float = field(default_factory=time.time)
+    source: str = "text"              # text(붙여 넣기) | txt | docx | pdf | pptx | hwpx | import(지난 미니미)
+    pages: list[int] = field(default_factory=list)      # 문단별 쪽·슬라이드 번호 (모르면 빈 목록)
 
 
 @dataclass
@@ -60,7 +62,9 @@ class Stance:
     priority: int = 2                 # 1(높음) ~ 3(낮음)
     sources: list[str] = field(default_factory=list)   # 근거 문단 라벨
     status: str = "candidate"         # candidate(초안) | confirmed(본인 확인) | inferred(추정) | rejected
-    origin: str = "report"            # report | interview | memory | manual
+    # report | interview | memory | manual | quick(빠른 입장) | memo(전달 메모) | chat(채팅 가져오기)
+    # | correction(돌아와서 정정) | import(지난 미니미 불러오기)
+    origin: str = "report"
     ts: float = field(default_factory=time.time)
 
 
@@ -98,7 +102,11 @@ class Persona:
     color: int = 0
     profile: Profile = field(default_factory=Profile)
     scope: Scope = field(default_factory=Scope)
-    consent: dict = field(default_factory=lambda: {"store_utterances": True, "use_reports": True})
+    # 개인정보 수집·이용 동의 (제22조: 항목별로 따로 받는다, 기본값은 모두 '동의 안 함')
+    # service: 회의 참여(필수) · use_reports: 미니미 근거 자료 사용(선택) · store_utterances: 회의 발언으로 입장 변화 찾기(선택)
+    consent: dict = field(default_factory=lambda: {"service": False, "use_reports": False, "store_utterances": False,
+                                                   "version": "", "ts": 0.0})
+    memo_log: dict = field(default_factory=dict)       # 전달 메모 id -> 전한 회의의 시작 시각 (회의마다 한 번만 전한다)
     reports: list[Report] = field(default_factory=list)
     stances: list[Stance] = field(default_factory=list)
     interview: list[InterviewQ] = field(default_factory=list)
@@ -149,6 +157,7 @@ class Decision:
     affected: list[str] = field(default_factory=list)    # 확인이 필요한 불참자
     responses: dict = field(default_factory=dict)        # uid -> {action, note, ts}
     source_msg: str = ""
+    dissent: list[dict] = field(default_factory=list)    # 결정과 다른 입장을 밝힌 참석자·미니미 [{uid, kind, position}]
     ts: float = field(default_factory=time.time)
 
 

@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="minime-test-"))
 os.environ["LLM_ORDER"] = os.environ.get("TEST_LLM_ORDER", "rule")
 os.environ["COOLDOWN_SEC"] = "0"
+os.environ.setdefault("REQUIRE_CONSENT", "0")   # 동의 기능 이전 테스트: 동의 확인은 tests/test_course.py에서 따로 켠다
 
 
 def _free_port() -> int:

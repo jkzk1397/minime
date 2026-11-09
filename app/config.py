@@ -83,6 +83,11 @@ DRIFT_THRESHOLD = _f("DRIFT_THRESHOLD", 0.80)  # 안건 거리(0~1). 이 위가 
 DRIFT_K = int(_f("DRIFT_K", 2))
 DRIFT_COOLDOWN_SEC = _f("DRIFT_COOLDOWN_SEC", 40)
 
+# ---------------------------------------------------------------- 개인정보 (10주차 근거 설계: 개인정보 보호법 제15조 제2항·제22조 제1항)
+REQUIRE_CONSENT = os.getenv("REQUIRE_CONSENT", "1") != "0"   # 동의 전에는 회의 발언·대리 참석을 막는다 (기존 테스트만 0)
+CONSENT_VERSION = os.getenv("CONSENT_VERSION", "2026-11")     # 안내문 내용이 바뀌면 올려서 다시 동의를 받는다
+RETENTION_DAYS = int(_f("RETENTION_DAYS", 30))                # 마지막 활동 뒤 이 기간이 지난 방은 지운다 (0이면 자동 삭제 안 함)
+
 # ---------------------------------------------------------------- 기타
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 SHORT_TERM_N = int(_f("SHORT_TERM_N", 24))

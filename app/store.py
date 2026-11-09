@@ -107,6 +107,23 @@ class Hub:
                 pass
         return existed
 
+    async def purge_older_than(self, days: int) -> list[str]:
+        """보유 기간이 지난 방을 지운다 (동의 화면에 적은 보관 기간). 접속 중인 방은 건드리지 않는다."""
+        if days <= 0:
+            return []
+        limit = time.time() - days * 86400
+        gone = []
+        for p in list((config.DATA_DIR / "rooms").glob("*.json")):
+            rid = p.stem
+            if not ROOM_RE.match(rid) or self.conns.get(rid):
+                continue
+            room = self.rooms.get(rid)
+            last = max([p.stat().st_mtime] + ([room.messages[-1].ts] if room and room.messages else []))
+            if last < limit:
+                await self.delete(rid)
+                gone.append(rid)
+        return gone
+
     def save_soon(self, room_id: str, delay: float = 1.0) -> None:
         try:
             loop = asyncio.get_running_loop()

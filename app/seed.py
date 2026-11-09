@@ -1,5 +1,7 @@
 """시연·평가 공용 시나리오: '스피치와 토론' 4조 — 캠퍼스 정책 제안 발표 준비 회의.
 
+등장인물(민준·지연·하린·도윤)은 모두 가상 인물이다. 실제 이름·학번·사진은 쓰지 않는다 (계획서 08 개인정보 점검).
+
 - 민준(팀장·사회): A안 지지. 보고서 + 확인된 입장 있음
 - 지연(자료조사): 시연 1장면에서 보고서를 올리고 인터뷰로 준비도를 채운다 (처음엔 프로필만)
 - 하린(발표·PPT): 지난 회의에선 A안 쪽 발언 → 오늘 B안 결론 → 2차 검증에서 '이전 발언과 충돌'
@@ -9,6 +11,7 @@ from __future__ import annotations
 
 import time
 
+from . import config
 from .models import Issue, Persona, Profile, Report, Room, Scope, Stance, new_id
 
 ISSUES = [
@@ -134,7 +137,16 @@ def personas() -> list[Persona]:
         _stance("i3", "저는 반론 대비와 질의응답을 맡을게요.", "", "", unknown="리허설 날짜는 아직 정하지 못했어요",
                 origin="manual"),
     ]
-    return [minjun, jiyeon, harin, doyun]
+    out = [minjun, jiyeon, harin, doyun]
+    for x in out:                       # 시연용 가상 인물: 동의를 마친 상태로 시작한다
+        consent_all(x)
+    return out
+
+
+def consent_all(p: Persona) -> Persona:
+    p.consent = {"service": True, "use_reports": True, "store_utterances": True,
+                 "version": config.CONSENT_VERSION, "ts": time.time()}
+    return p
 
 
 EXAMPLES = {"jiyeon": {"report_title": JIYEON_REPORT[0], "report_text": "\n\n".join(JIYEON_REPORT[1]),

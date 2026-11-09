@@ -46,10 +46,36 @@ def decision_text(text: str, issue=None) -> str:
     return pick.rstrip(".!")
 
 
+def dissenters(room: Room, issue_id: str, position: str, by: str, affected: list[str]) -> list[dict]:
+    """결정과 다른 입장을 이번 회의에서 마지막으로 밝힌 사람·미니미 (활동 1 위험 항목 3-2: 소수 의견 누락).
+    불참자(affected)는 이미 보류로 확인받으므로 빼고, 참석자가 반대했는데 '확정'으로만 남는 일을 막는다."""
+    issue = room.issue(issue_id)
+    if not issue or not position:
+        return []
+    started = room.meeting.get("started_at") or 0
+    last: dict[tuple[str, str], str] = {}
+    for m in room.messages:
+        if m.ts < started or m.kind not in ("human", "mini") or m.issue_id != issue_id or m.meta.get("abstain"):
+            continue
+        pos = m.meta.get("position") or (stance_position(issue, m.text) if m.kind == "human" else detect_position(issue, m.text))
+        if pos:
+            last[(m.user_id, m.kind)] = pos
+    out = []
+    for (uid, kind), pos in last.items():
+        if pos == position or uid == by or (kind == "mini" and uid in affected):
+            continue
+        if kind == "human" and any(k == "human" and u == uid for (u, k) in last) and last.get((uid, "human")) == position:
+            continue
+        out.append({"uid": uid, "kind": kind, "position": pos})
+    return out
+
+
 async def record(room: Room, msg: Message, issue_id: str, manual: bool = False) -> Decision:
     affected = await affected_members(room, issue_id, exclude=msg.user_id, text=msg.text)
     status = "pending" if affected else ("confirmed" if issue_id else "needs_check")
-    d = Decision(new_id("d"), decision_text(msg.text, room.issue(issue_id)), issue_id, msg.user_id, status, affected, {}, msg.id)
+    issue0 = room.issue(issue_id)
+    d = Decision(new_id("d"), decision_text(msg.text, issue0), issue_id, msg.user_id, status, affected, {}, msg.id)
+    d.dissent = dissenters(room, issue_id, detect_position(issue0, d.text), msg.user_id, affected)
     room.decisions.append(d)
     issue = room.issue(issue_id)
     if issue:
@@ -91,7 +117,19 @@ def decision_dict(room: Room, d: Decision) -> dict:
     x["status_ko"] = STATUS_KO.get(d.status, d.status)
     x["by_name"] = room.personas[d.by].name if d.by in room.personas else ""
     x["affected_names"] = [room.personas[u].name for u in d.affected if u in room.personas]
+    x["dissent_names"] = [f"{room.personas[o['uid']].name}{' 미니미' if o.get('kind') == 'mini' else ''}"
+                          f"({o.get('position', '')})"
+                          for o in d.dissent if o.get("uid") in room.personas]
     return x
+
+
+def review_stats(room: Room, since: float = 0.0) -> dict:
+    """본인 확인 통계: 돌아온 사람이 미니미 발언을 '맞아요/달라요'로 확인한 결과 (계획서 07 종료 기준의 '발언 수정률')."""
+    minis = [m for m in room.messages if m.kind == "mini" and not m.meta.get("abstain") and m.ts >= since]
+    reviewed = [m for m in minis if (m.meta.get("review") or {}).get("status") in ("ok", "fix")]
+    fix = sum(1 for m in reviewed if m.meta["review"]["status"] == "fix")
+    return {"spoken": len(minis), "reviewed": len(reviewed), "ok": len(reviewed) - fix, "fix": fix,
+            "fix_rate": round(fix / len(reviewed), 3) if reviewed else None}
 
 
 def refresh_decisions(room: Room, data: dict) -> bool:
@@ -202,6 +240,10 @@ async def make_minutes(room: Room) -> dict:
             conflicts.append(" vs ".join(f"{k}: {', '.join(v)}" for k, v in positions.items()))
         ds = [d for d in room.decisions if d.issue_id == issue.id]
         last = ds[-1] if ds else None
+        if last and last.dissent:
+            names = [f"{room.personas[o['uid']].name}({o['position']})" for o in last.dissent if o["uid"] in room.personas]
+            if names:
+                conflicts.append(f"결정에 다른 입장: {', '.join(names)}")
         issues_out.append({
             "issue_id": issue.id, "title": issue.title, "opinions": opinions, "conflicts": conflicts,
             "decision": decision_dict(room, last) if last else None,
@@ -214,7 +256,9 @@ async def make_minutes(room: Room) -> dict:
     if msgs:
         sys_p, user_p, _ = llm.prompt(
             "minutes", agenda=room.agenda, issues=", ".join(f"{i.id}:{i.title}" for i in room.issues),
-            decisions=" / ".join(f"{d.issue_id}:{d.text}({d.status})" for d in room.decisions) or "없음",
+            decisions=" / ".join(f"{d.issue_id}:{d.text}({d.status})"
+                                 + (f"[다른 입장: {', '.join(o['position'] for o in d.dissent)}]" if d.dissent else "")
+                                 for d in room.decisions) or "없음",
             history=history_text(room, 80))
         data, engine = await llm.call_json("minutes", "slow", sys_p, user_p, _MIN_SCHEMA, temperature=0.2,
                                            max_tokens=1200)
@@ -225,7 +269,9 @@ async def make_minutes(room: Room) -> dict:
             for it in issues_out:
                 llm_it = by_id.get(it["issue_id"])
                 if llm_it and llm_it.get("conflicts"):
-                    it["conflicts"] = [c for c in llm_it["conflicts"] if isinstance(c, str)][:3] or it["conflicts"]
+                    keep = [c for c in it["conflicts"] if c.startswith("결정에 다른 입장")]   # 이견은 모델이 빼도 남긴다
+                    it["conflicts"] = ([c for c in llm_it["conflicts"] if isinstance(c, str)][:3] or it["conflicts"])
+                    it["conflicts"] += [c for c in keep if c not in it["conflicts"]]
         else:
             engine = llm.RULE
     if not summary:
@@ -235,6 +281,10 @@ async def make_minutes(room: Room) -> dict:
         bits = [f"쟁점 {len(room.issues)}개 중 확정 {len(done)}개, 보류·확인 필요 {len(pend)}개, 미결 {len(opened)}개예요."]
         if pend:
             bits.append("보류된 결정은 불참자가 돌아와 승인하면 확정돼요.")
+        contested = [i for i in issues_out if (i.get("decision") or {}).get("dissent")]
+        if contested:
+            bits.append(f"다른 입장이 남은 결정이 {len(contested)}개 있어요: "
+                        + ", ".join(i["title"] for i in contested) + ".")
         summary = " ".join(bits)
         next_steps = [f"{i['title']} 이어서 논의" for i in opened][:3] + \
                      [f"{q['who']} 님 확인: {q['text']}" for q in questions][:3]
@@ -244,5 +294,6 @@ async def make_minutes(room: Room) -> dict:
         "loose_decisions": loose, "next_steps": next_steps, "engine": engine,
         "stats": {"messages": len(msgs), "mini": sum(1 for m in msgs if m.kind == "mini"),
                   "minutes": round(dur / 60, 1), "decisions": len(room.decisions)},
+        "review": review_stats(room, started),
         "ts": time.time(),
     }

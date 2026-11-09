@@ -9,7 +9,6 @@ import os
 import re
 import socket
 import time
-import zipfile
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
@@ -20,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import autoplay, config, demo, interview, llm, minutes, nli, orchestrator, persona, retrieval, seed
+from . import autoplay, config, demo, interview, llm, minutes, nli, orchestrator, persona, retrieval, seed, sources
 from .models import Stance, new_id
 from .store import ROOM_RE, UID_RE, add_persona, hub
 
@@ -72,6 +71,18 @@ async def _probe_loop() -> None:
         await asyncio.sleep(15)
 
 
+async def _retention_loop() -> None:
+    """보유 기간(RETENTION_DAYS)이 지난 방을 지운다. 동의 화면에 적은 기간과 실제 동작을 맞춘다."""
+    while True:
+        try:
+            gone = await hub.purge_older_than(config.RETENTION_DAYS)
+            if gone:
+                log.warning("보유 기간 %s일이 지난 방 %s개를 지웠어요: %s", config.RETENTION_DAYS, len(gone), ", ".join(gone))
+        except Exception:
+            log.exception("retention cleanup failed")
+        await asyncio.sleep(6 * 3600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     llm._listeners.append(_status_changed)
@@ -79,12 +90,14 @@ async def lifespan(app: FastAPI):
     loop.run_in_executor(None, retrieval.warmup)       # 형태소 분석기 첫 호출 지연을 미리
     loop.run_in_executor(None, _nli_warmup, loop)           # 근거 검증 NLI 모델 (없으면 핵심어 검사로 대신)
     probe = asyncio.create_task(_probe_loop())
-    if hub.path("demo").exists() and {"minsu", "jihyun", "haeun"} & set(hub.room("demo").personas):  # 예전 이름으로 저장된 시연 방 (없으면 만들지 않는다)
-        hub.replace(seed.fresh_room("demo"))
+    if hub.path("demo").exists() and not {"minjun", "jiyeon", "harin", "doyun"} & set(hub.room("demo").personas):
+        hub.replace(seed.fresh_room("demo"))             # 예전 시나리오로 저장된 시연 방은 지금 시나리오로 다시 만든다
+    retention = asyncio.create_task(_retention_loop())
     base = config.PUBLIC_URL or f"http://{_lan_ip()}:{os.getenv('PORT', '8000')}"
     log.warning("팀원 접속 주소: %s/?room=live  (같은 와이파이에서 휴대폰·노트북으로 접속)", base)
     yield
     probe.cancel()
+    retention.cancel()
     hub.save_all()
 
 
@@ -326,6 +339,10 @@ async def member_detail(room_id: str, uid: str):
     for r in d["reports"]:
         ri = [x.id for x in p.reports].index(r["id"])
         r["labels"] = [persona.report_label(p, ri, i) for i in range(len(r["paragraphs"]))]
+    for r, rep in zip(d["reports"], p.reports):
+        r["source"] = rep.source
+    d["consent_current"] = config.CONSENT_VERSION
+    d["consent_ok"] = (p.consent or {}).get("version") == config.CONSENT_VERSION and bool((p.consent or {}).get("service"))
     d["readiness"] = await persona.readiness(room, uid)
     d["last_digest"] = orchestrator.fresh_digest(room, uid)   # 이미 답한 질문·결정은 지금 상태로
     d["example"] = seed.example_for(room, uid)
@@ -343,8 +360,6 @@ class ProfileIn(BaseModel):
     scope_level: str = "opinion"
     no_commit: list[str] = Field(default_factory=list)
     scope_note: str = ""
-    store_utterances: bool = True
-    use_reports: bool = True
 
 
 def _clean(xs: list[str], n: int, ln: int = 120) -> list[str]:
@@ -366,7 +381,6 @@ async def update_profile(room_id: str, uid: str, body: ProfileIn):
     p.scope.level = body.scope_level if body.scope_level in ("opinion", "answer") else "opinion"
     p.scope.no_commit = _clean(body.no_commit, 6, 20)
     p.scope.note = body.scope_note.strip()[:120]
-    p.consent = {"store_utterances": body.store_utterances, "use_reports": body.use_reports}
     p.touch()
     await orchestrator.after_persona_change(room_id)
     return await member_detail(room_id, uid)
@@ -375,14 +389,21 @@ async def update_profile(room_id: str, uid: str, body: ProfileIn):
 class ReportIn(BaseModel):
     title: str = ""
     text: str
+    source: str = "text"
+    pages: list[str] | None = None                       # 파일 미리보기에서 받은 쪽(슬라이드)별 글 (고치지 않았을 때만)
 
 
-async def _add_report(room_id: str, uid: str, title: str, text: str) -> dict:
+async def _add_report(room_id: str, uid: str, title: str, text: str, source: str = "text",
+                      pages: list[str] | None = None) -> dict:
     room, p = _member(room_id, uid)
     if len(text) > 30000:
-        raise HTTPException(400, "보고서가 너무 길어요 (3만 자 이내).")
+        raise HTTPException(400, "자료가 너무 길어요 (3만 자 이내). 안건과 관련된 부분만 남겨 주세요.")
     try:
-        rep = persona.add_report(room, p, title, text)
+        if pages:                                        # 쪽(슬라이드)별 글을 받았으면 문단마다 쪽 번호를 붙인다
+            paras, nums = persona.split_pages(pages)
+            rep = persona.add_report(room, p, title, "\n\n".join(paras), source, nums)
+        else:
+            rep = persona.add_report(room, p, title, text, source)
     except ValueError as e:
         raise HTTPException(400, str(e))
     sts, engine = await persona.extract_stances(room, p, rep)
@@ -396,55 +417,45 @@ async def _add_report(room_id: str, uid: str, title: str, text: str) -> dict:
 
 @app.post("/api/rooms/{room_id}/members/{uid}/reports")
 async def add_report(room_id: str, uid: str, body: ReportIn):
-    return await _add_report(room_id, uid, body.title, body.text)
+    src = body.source if body.source in ("text", "txt", "docx", "pdf", "pptx", "hwpx") else "text"
+    pages = [str(x)[:8000] for x in (body.pages or [])][:80] or None
+    return await _add_report(room_id, uid, body.title, body.text, src, pages)
+
+
+async def _read_upload(file: UploadFile) -> bytes:
+    raw = await file.read()
+    if len(raw) > 8 * 1024 * 1024:
+        raise HTTPException(400, "파일은 8MB 이내만 올릴 수 있어요.")
+    return raw
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/reports/extract")
+async def extract_report(room_id: str, uid: str, file: UploadFile = File(...)):
+    """파일에서 글만 꺼내 돌려준다 (저장하지 않음). 사용자가 확인·수정한 뒤 /reports 로 올린다 (위험 항목 2-2)."""
+    _member(room_id, uid)
+    raw = await _read_upload(file)
+    try:
+        out = sources.extract_file(file.filename or "", raw)
+    except sources.ExtractError as e:
+        raise HTTPException(400, str(e))
+    paras = persona.split_pages(out["pages"])[0] if out["pages"] else persona.split_report(out["text"])
+    if not paras:
+        raise HTTPException(400, "파일에서 읽을 수 있는 글을 찾지 못했어요. 내용을 붙여 넣어 주세요.")
+    return {"title": Path(file.filename or "자료").stem[:60], "text": out["text"][:30000], "pages": out["pages"],
+            "source": out["source"], "warnings": out["warnings"], "paragraphs": len(paras),
+            "chars": len(out["text"])}
 
 
 @app.post("/api/rooms/{room_id}/members/{uid}/reports/upload")
 async def upload_report(room_id: str, uid: str, file: UploadFile = File(...), title: str = Form("")):
-    raw = await file.read()
-    if len(raw) > 8 * 1024 * 1024:
-        raise HTTPException(400, "파일은 8MB 이내만 올릴 수 있어요.")
-    name = (file.filename or "").lower()
-    text = _extract_text(name, raw)
-    return await _add_report(room_id, uid, title or Path(file.filename or "보고서").stem, text)
-
-
-def _extract_text(name: str, raw: bytes) -> str:
-    """보고서 파일 → 텍스트. txt/md는 그대로, docx는 문단 XML, pdf는 Docling·pypdf가 있으면."""
-    if name.endswith((".txt", ".md", ".markdown")):
-        for enc in ("utf-8", "cp949", "euc-kr"):
-            try:
-                return raw.decode(enc)
-            except UnicodeDecodeError:
-                continue
-        raise HTTPException(400, "글자 인코딩을 읽을 수 없어요.")
-    if name.endswith(".docx"):
-        try:
-            with zipfile.ZipFile(io.BytesIO(raw)) as z:
-                xml = z.read("word/document.xml").decode("utf-8")
-        except Exception:
-            raise HTTPException(400, "docx 파일을 읽을 수 없어요.")
-        paras = []
-        for para in re.findall(r"<w:p[ >].*?</w:p>", xml, flags=re.S):
-            t = "".join(re.findall(r"<w:t[^>]*>(.*?)</w:t>", para, flags=re.S))
-            if t.strip():
-                paras.append(re.sub(r"&lt;", "<", re.sub(r"&gt;", ">", re.sub(r"&amp;", "&", t))))
-        return "\n\n".join(paras)
-    if name.endswith(".pdf"):
-        try:
-            from docling.document_converter import DocumentConverter   # 선택: Docling (MIT)
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
-                f.write(raw)
-            return DocumentConverter().convert(f.name).document.export_to_markdown()
-        except ImportError:
-            pass
-        try:
-            from pypdf import PdfReader
-            return "\n\n".join((pg.extract_text() or "") for pg in PdfReader(io.BytesIO(raw)).pages)
-        except ImportError:
-            raise HTTPException(400, "PDF를 읽으려면 서버에 docling 또는 pypdf를 설치해 주세요. 지금은 내용을 붙여 넣어 주세요.")
-    raise HTTPException(400, "txt, md, docx, pdf 파일만 올릴 수 있어요.")
+    """예전 방식(바로 올리기). 화면은 /reports/extract → 확인 → /reports 를 쓴다."""
+    raw = await _read_upload(file)
+    try:
+        out = sources.extract_file(file.filename or "", raw)
+    except sources.ExtractError as e:
+        raise HTTPException(400, str(e))
+    return await _add_report(room_id, uid, title or Path(file.filename or "자료").stem, out["text"], out["source"],
+                             out["pages"])
 
 
 @app.delete("/api/rooms/{room_id}/members/{uid}/reports/{report_id}")
@@ -544,6 +555,186 @@ async def forget_me(room_id: str, uid: str):
     await orchestrator.after_persona_change(room_id)
     await orchestrator.system(room_id, f"{p.name} 님이 미니미의 기억(보고서·입장 카드)을 모두 지웠어요.", event="forget")
     return await member_detail(room_id, uid)
+
+
+# ---------------------------------------------------------------- 개인정보 동의 (10주차 근거 설계 보고서 5-2)
+def _privacy_notice() -> dict:
+    """동의 화면 문구. 보유 기간·외부 전송은 실제 설정에서 읽어 와서 안내와 동작이 어긋나지 않게 한다."""
+    api_on = "api" in config.LLM_ORDER and bool(config.API_KEY)
+    host = re.sub(r"^https?://", "", config.API_BASE).split("/")[0] if api_on else ""
+    keep = (f"마지막 회의 활동 뒤 {config.RETENTION_DAYS}일이 지나면 자동으로 지워요. 그 전에도 '내 기억 삭제'로 바로 지울 수 있어요."
+            if config.RETENTION_DAYS > 0 else
+            "회의방이 삭제되거나 본인이 '내 기억 삭제'를 누를 때까지 보관해요.")
+    outside = []
+    if api_on:
+        outside.append(f"AI 답변을 만들 때 회의 대화와 근거 자료 일부가 외부 AI 서비스({host})로 전송될 수 있어요.")
+    if config.TAVILY_API_KEY:
+        outside.append("2차 검증에서 팀 자료에 근거가 없으면 주장 문장이 웹 검색 서비스(Tavily)로 전송될 수 있어요.")
+    if not outside:
+        outside.append("AI 처리는 이 컴퓨터 안에서 이뤄지고, 내용을 외부 AI 서비스로 보내지 않아요.")
+    return {
+        "version": config.CONSENT_VERSION,
+        "items": [
+            {"key": "service", "required": True, "title": "회의 참여를 위한 개인정보 수집·이용",
+             "purpose": "회의방 참여자 구분, 실시간 회의 진행, 회의록 작성",
+             "fields": "이름(닉네임), 팀에서 맡은 일, 회의 중 내가 쓴 메시지, 결정에 남긴 승인·이의",
+             "keep": keep,
+             "refuse": "동의하지 않으면 회의방에 자리를 잡고 말할 수 없어요. 발표 화면(관전)으로는 볼 수 있어요."},
+            {"key": "use_reports", "required": False, "title": "미니미 근거 자료 수집·이용",
+             "purpose": "자리를 비운 동안 미니미가 내 입장을 근거와 함께 대신 전하기",
+             "fields": "올린 자료(보고서·발표자료·메모), 인터뷰 답, 입장 카드, 채팅에서 가져온 내 말",
+             "keep": keep,
+             "refuse": "동의하지 않아도 회의에는 참여할 수 있어요. 다만 미니미 대리 참석은 켤 수 없어요."},
+            {"key": "store_utterances", "required": False, "title": "회의 발언으로 입장 변화 찾기",
+             "purpose": "회의가 끝난 뒤 내 발언에서 바뀐 입장 후보를 찾아 다음 회의 준비에 쓰기 (내가 확인해야 쓰임)",
+             "fields": "회의 중 내가 쓴 메시지",
+             "keep": keep,
+             "refuse": "동의하지 않아도 모든 기능을 쓸 수 있어요. 회의 뒤 입장 변화 후보만 만들지 않아요."},
+        ],
+        "outside": outside,
+        "where": "이 시제품은 서버를 띄운 컴퓨터의 data 폴더에 회의방별로 저장해요.",
+        "rights": "언제든 동의를 바꾸거나 철회할 수 있고, '내 기억 삭제'로 미니미가 기억하는 내용을 모두 지울 수 있어요.",
+        "law": ["「개인정보 보호법」 제15조 제2항: 수집·이용 목적, 수집 항목, 보유·이용 기간, 동의 거부 권리와 불이익을 알린다",
+                "「개인정보 보호법」 제22조 제1항: 동의 사항을 구분해 정보주체가 명확히 알 수 있게 알리고 각각 동의를 받는다"],
+        "note": "수업 과제용 시제품의 설계안이에요. 실제 서비스로 운영하려면 운영 정책을 확정하고 법적 검토를 다시 받아야 해요.",
+    }
+
+
+@app.get("/api/privacy")
+def privacy_notice():
+    return _privacy_notice()
+
+
+class ConsentIn(BaseModel):
+    service: bool = False
+    use_reports: bool = False
+    store_utterances: bool = False
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/consent")
+async def set_consent(room_id: str, uid: str, body: ConsentIn):
+    room, p = _member(room_id, uid)
+    if not body.service:
+        raise HTTPException(400, "회의 참여 동의(필수)가 없으면 자리를 잡을 수 없어요. 관전으로 들어가 주세요.")
+    was = dict(p.consent or {})
+    p.consent = {"service": True, "use_reports": body.use_reports, "store_utterances": body.store_utterances,
+                 "version": config.CONSENT_VERSION, "ts": time.time()}
+    if p.mini_on and not body.use_reports:               # 근거 사용 동의를 거두면 대리 참석도 끈다
+        await orchestrator.set_away(room_id, uid, False, wait_digest=False)
+    if was.get("store_utterances") and not body.store_utterances:
+        p.stances = [s for s in p.stances if s.status != "inferred"]
+    p.touch()
+    await orchestrator.after_persona_change(room_id)
+    return await member_detail(room_id, uid)
+
+
+# ---------------------------------------------------------------- 미니미를 만드는 다른 방법 (문서 없이)
+class QuickItem(BaseModel):
+    issue_id: str
+    choice: str = ""
+    reason: str = ""
+    red_line: str = ""
+    unknown: str = ""
+
+
+class QuickIn(BaseModel):
+    items: list[QuickItem] = Field(default_factory=list)
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/quick")
+async def quick_stances(room_id: str, uid: str, body: QuickIn):
+    """빠른 입장 체크: 쟁점마다 선택지·이유·조건을 고른 그대로 확인된 입장 카드로."""
+    room, p = _member(room_id, uid)
+    created, replaced = sources.quick(room, p, [i.model_dump() for i in body.items[:12]])
+    if not created:
+        raise HTTPException(400, "고른 쟁점이 없어요. 선택지를 고르거나 이유를 한 줄 적어 주세요.")
+    await orchestrator.after_persona_change(room_id)
+    return {"created": len(created), "replaced": len(replaced), "member": await member_detail(room_id, uid)}
+
+
+class MemoIn(BaseModel):
+    text: str
+    issue_id: str = ""
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/memos")
+async def add_memo(room_id: str, uid: str, body: MemoIn):
+    """전달 메모: 회의에서 미니미가 고치지 않고 그대로 전할 말."""
+    room, p = _member(room_id, uid)
+    try:
+        st = sources.add_memo(room, p, body.text[:300], body.issue_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    await orchestrator.after_persona_change(room_id)
+    return {"stance": asdict(st), "member": await member_detail(room_id, uid)}
+
+
+class ChatIn(BaseModel):
+    lines: list = Field(default_factory=list)            # [{text, when}] — 브라우저가 '내 말'만 골라 보낸다
+    source: str = "kakao"
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/chat")
+async def import_chat(room_id: str, uid: str, body: ChatIn):
+    """채팅에서 가져오기: 다른 사람의 말은 브라우저에서 버리고 내 말만 받는다 → 입장 카드 초안."""
+    room, p = _member(room_id, uid)
+    lines = sources.clean_lines(body.lines)
+    if len(lines) < 2:
+        raise HTTPException(400, "가져올 내 말이 거의 없어요. 대화방에서 내 이름을 맞게 골랐는지 확인해 주세요.")
+    stances, engine = await sources.chat_candidates(room, p, lines)
+    sources.import_chat(room, p, lines, stances, body.source)
+    await orchestrator.after_persona_change(room_id)
+    return {"lines": len(lines), "candidates": len(stances), "engine": engine,
+            "member": await member_detail(room_id, uid)}
+
+
+@app.get("/api/rooms/{room_id}/members/{uid}/export")
+async def export_member(room_id: str, uid: str):
+    room, p = _member(room_id, uid)
+    data = sources.export_persona(room, p)
+    fname = f"minime-{uid}.json"
+    import json as _json
+    return PlainTextResponse(_json.dumps(data, ensure_ascii=False, indent=1), media_type="application/json; charset=utf-8",
+                             headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+class ImportIn(BaseModel):
+    data: dict
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/import")
+async def import_member(room_id: str, uid: str, body: ImportIn):
+    room, p = _member(room_id, uid)
+    try:
+        out = sources.import_persona(room, p, body.data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    await orchestrator.after_persona_change(room_id)
+    return {**out, "member": await member_detail(room_id, uid)}
+
+
+class ReviewIn(BaseModel):
+    status: str
+    note: str = ""
+
+
+@app.post("/api/rooms/{room_id}/members/{uid}/messages/{msg_id}/review")
+async def review_message(room_id: str, uid: str, msg_id: str, body: ReviewIn):
+    """돌아와서 미니미가 대신 한 말 확인: 맞아요 / 내 생각과 달라요(+바로잡을 말)."""
+    _member(room_id, uid)
+    try:
+        msg = await orchestrator.review_message(room_id, uid, msg_id, body.status, body.note)
+    except KeyError as e:
+        raise HTTPException(404, _msg(e))
+    except ValueError as e:
+        raise HTTPException(400, _msg(e))
+    room = hub.room(room_id)
+    return {"message": msg.to_dict(), "review": minutes.review_stats(room), "member": await member_detail(room_id, uid)}
+
+
+@app.get("/api/rooms/{room_id}/review")
+def review_summary(room_id: str):
+    return minutes.review_stats(_room(room_id))
 
 
 class QAnswerIn(BaseModel):
@@ -717,6 +908,8 @@ async def _dispatch(room_id: str, uid: str, t: str, ev: dict, ws: WebSocket) -> 
     room = hub.room(room_id)
     if uid not in room.personas:                         # 그 사이 방이 초기화됐으면 무시
         return
+    if t in ("message", "refine", "away") and not persona.allowed(room.personas[uid], "service"):
+        raise ValueError("회의에 참여하려면 먼저 개인정보 수집·이용에 동의해 주세요.")
     if t == "message":
         text = (ev.get("text") or "").strip()[:MAX_TEXT]
         if text:

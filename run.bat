@@ -15,16 +15,18 @@ if not exist "%PY%" (
   echo   가상환경을 만드는 중...
   python -m venv .venv
   if errorlevel 1 goto :novenv
-  if exist .venv\.installed del .venv\.installed
+  if exist .venv\.req del .venv\.req
 )
 
-REM 3) 패키지 설치 (성공하면 표시 파일을 남겨 다음부터 건너뜀)
-if not exist .venv\.installed (
+REM 3) 패키지 설치: 처음이거나 requirements.txt가 바뀌었으면(브랜치를 바꿨을 때 등) 다시 설치
+set "NEEDPIP=1"
+if exist .venv\.req fc /b requirements.txt .venv\.req >nul && set "NEEDPIP=0"
+if "%NEEDPIP%"=="1" (
   echo   패키지를 설치하는 중... 처음에는 몇 분 걸릴 수 있어요.
   "%PY%" -m pip install -q --upgrade pip
   "%PY%" -m pip install -r requirements.txt
   if errorlevel 1 goto :nopip
-  echo ok> .venv\.installed
+  copy /y requirements.txt .venv\.req >nul
 )
 
 if not exist .env copy .env.example .env >nul

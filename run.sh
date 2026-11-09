@@ -5,7 +5,12 @@ cd "$(dirname "$0")"
 if [ ! -d .venv ]; then
   python3 -m venv .venv
   ./.venv/bin/pip install -q --upgrade pip
+fi
+# requirements.txt가 바뀌었으면(브랜치를 바꿨을 때 등) 다시 설치한다
+if ! cmp -s requirements.txt .venv/.req; then
+  echo "  패키지를 설치하는 중... 처음에는 몇 분 걸릴 수 있어요."
   ./.venv/bin/pip install -q -r requirements.txt
+  cp requirements.txt .venv/.req
 fi
 [ -f .env ] || cp .env.example .env
 PORT="${PORT:-8000}"

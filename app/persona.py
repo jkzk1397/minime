@@ -495,10 +495,8 @@ def _criteria_text(p: Persona) -> str:
 # ---------------------------------------------------------------- 침묵 (기권)
 def abstain_text(p: Persona, reason: str) -> str:
     if reason == "commit":
-        return (f"이건 약속이 필요한 일이라 제가 대신 정할 수 없어요. {p.name} 님이 돌아오면 직접 확인하도록 "
-                f"질문으로 남겨 둘게요.")
-    return (f"이 부분은 {p.name} 님의 보고서와 입장 카드에 근거가 없어서 제가 대신 답하기 어려워요. "
-            f"{p.name} 님께 확인이 필요해요. 돌아오면 볼 수 있게 질문으로 남겨 둘게요.")
+        return f"약속은 제가 대신 정할 수 없어요. {p.name} 님이 돌아오면 직접 답하도록 질문으로 남겨 둘게요."
+    return f"이 부분은 {p.name} 님께 확인이 필요해요. 제 자료에는 근거가 없어서, 돌아오면 볼 질문으로 남겨 둘게요."
 
 
 def save_question(p: Persona, trigger: Message, reason: str, issue_id: str) -> ReturnQuestion:

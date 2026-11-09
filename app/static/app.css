@@ -854,3 +854,9 @@ body.ob-open{overflow:hidden}
 .feed-empty{max-width:460px}
 .mic[aria-pressed="true"]{color:var(--bad);background:var(--bad-soft)}
 .mic[aria-pressed="true"] .ic{animation:pulse 1s ease-in-out infinite}
+.more-fields{border-radius:14px;padding:10px 14px;background:var(--panel-2)}
+.more-fields summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--ink-2);list-style:none;display:flex;align-items:center;gap:8px}
+.more-fields summary::-webkit-details-marker{display:none}
+.more-fields summary::before{content:"";width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+.more-fields[open] summary::before{transform:rotate(45deg)}
+.more-fields[open] summary{margin-bottom:12px}

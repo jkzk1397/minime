@@ -1,4 +1,4 @@
-"""방·접속·메시지 저장소. 해커톤은 인메모리 + JSON 파일 (data/rooms/*.json). 배포 때 PostgreSQL로 교체."""
+"""방·접속·메시지 저장소. 시제품은 인메모리 + JSON 파일 (data/rooms/*.json). 배포 때 PostgreSQL로 교체."""
 from __future__ import annotations
 
 import asyncio

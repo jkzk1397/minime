@@ -1,4 +1,4 @@
-"""데이터 모델. 해커톤은 인메모리 + JSON 파일 저장 (store.py), 배포 때 PostgreSQL + pgvector로 교체."""
+"""데이터 모델. 시제품은 인메모리 + JSON 파일 저장 (store.py), 배포 때 PostgreSQL + pgvector로 교체."""
 from __future__ import annotations
 
 import time

@@ -228,7 +228,10 @@ async def make_minutes(room: Room) -> dict:
             pos = stance_position(issue, m.text) if m.kind == "human" else detect_position(issue, m.text)
             if key in ops and ops[key]["position"] and not pos:
                 continue                     # 입장이 드러난 발언을 대표 의견으로 남긴다
-            ops[key] = {"who": _who(room, m), "uid": m.user_id, "kind": m.kind, "text": strip_cites(m.text),
+            text = strip_cites(m.text)
+            if m.meta.get("memo"):                        # 전달 메모는 머리말 없이 메모 내용만
+                text = " ".join(s.get("text", "") for s in m.meta.get("sentences", [])) or text
+            ops[key] = {"who": _who(room, m), "uid": m.user_id, "kind": m.kind, "text": text,
                         "position": pos, "citations": [c["label"] for c in m.meta.get("citations", [])]}
         opinions = list(ops.values())
         positions = {}

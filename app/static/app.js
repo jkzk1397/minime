@@ -757,6 +757,13 @@
     if (!m) return;
     openModal({ eyebrow: '회의 도우미', title: '회의록', body: minutesBody(m), wide: true });
     S.minutesOpen = id;
+    // 본인 확인은 회의가 끝난 뒤에 쌓이므로 지금 값으로 다시 그린다
+    api('GET', `/api/rooms/${encodeURIComponent(S.roomId)}/review`).then(rv => {
+      if (S.minutesOpen !== id || $('#modal').hidden) return;
+      m.meta = { ...(m.meta || {}), review: rv };
+      const old = $('#modalBody .result-card');
+      if (old) old.replaceWith(minutesBody(m));
+    }).catch(() => {});
   }
   function minutesBody(m) {
     const x = m.meta || {};

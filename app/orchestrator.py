@@ -449,9 +449,8 @@ async def set_away(room_id: str, uid: str, on: bool, wait_digest: bool = True) -
         p.away_marker = len(room.messages)
         p.away_since = time.time()
         r = await persona.readiness(room, uid)
-        warn = "" if r["ready"] else f" (준비도 {r['covered']}/{r['total']}: 근거 없는 쟁점은 말하지 않고 질문으로 남겨요)"
-        await system(room_id, f"{p.name} 님이 불참해요. {p.name} 님의 미니미가 대리 참석합니다{warn}.",
-                     event="away", uid=uid)
+        warn = "" if r["ready"] else f" (준비 {r['covered']}/{r['total']}, 근거 없는 쟁점은 질문으로 남겨요)"
+        await system(room_id, f"{p.name} 님이 불참해요. 미니미가 대리 참석합니다{warn}.", event="away", uid=uid)
         await broadcast_members(room_id)
         from . import autoplay                              # 실전 시연 방: 발표자가 빠지면 대본 자동 진행
         if uid == autoplay.PRESENTER:
@@ -461,7 +460,7 @@ async def set_away(room_id: str, uid: str, on: bool, wait_digest: bool = True) -
     from . import autoplay
     if uid == autoplay.PRESENTER:
         await autoplay.presenter_back(room_id)
-    await system(room_id, f"{p.name} 님이 돌아왔어요. 미니미 대리 참석을 끕니다.", event="back", uid=uid)
+    await system(room_id, f"{p.name} 님이 돌아왔어요. 미니미는 쉬어요.", event="back", uid=uid)
     if not wait_digest:
         hub.spawn(room_id, _send_digest(room_id, uid, missed))
         return None

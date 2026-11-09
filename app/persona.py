@@ -369,7 +369,10 @@ async def compose(room: Room, uid: str, trigger: Message, act: str, issue_id: st
         elif stance and labels.get(stance.id) in pool:
             sents = keep_red_line(sents, stance, labels[stance.id])
     if not sents:
-        sents = _rule_sentences(p, act, trigger.text, stance, labels, hits, pool)
+        # 같은 미니미가 방금 쓴 근거는 뒤로: 다시 말할 때는 아직 안 꺼낸 근거부터
+        before = {c.get("label") for m in room.messages[-8:] if m.kind == "mini" and m.user_id == uid
+                  for c in (m.meta or {}).get("citations", [])}
+        sents = _rule_sentences(p, act, trigger.text, stance, labels, hits, pool, used_before=before)
     if not sents:
         return {"text": "", "sentences": [], "citations": [], "engine": engine, "dropped": dropped,
                 "verify": _verify_meta(checks)}
@@ -444,11 +447,12 @@ def _with_tag(s: dict) -> str:
 
 
 def _rule_sentences(p: Persona, act: str, trigger: str, stance: Stance | None, labels: dict,
-                    hits: list[Hit], pool: dict[str, Chunk]) -> list[dict]:
+                    hits: list[Hit], pool: dict[str, Chunk], used_before: set | None = None) -> list[dict]:
     """추출식 규칙 발언: 확인된 입장 카드의 주장 + 보고서의 가장 관련 있는 근거 문장."""
     out: list[dict] = []
+    used_before = used_before or set()
     evid = sorted([h for h in hits if h.chunk.kind in ("report", "profile") and h.chunk.label in pool],
-                  key=lambda h: -h.strength)
+                  key=lambda h: (h.chunk.label in used_before, -h.strength))
     if act == "answer" or not stance:
         # 사실을 묻는 질문: 보고서 문장이 있으면 그것부터 (입장 카드는 두 번째 문장으로)
         facts = [h for h in hits if h.chunk.kind in ("report", "profile") and h.chunk.label in pool

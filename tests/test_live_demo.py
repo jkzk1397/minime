@@ -209,3 +209,31 @@ def test_room_admin_with_password():
             assert (await c.delete("/api/rooms/adm-1", headers=ok)).json()["deleted"] is True
             assert all(r["room_id"] != "adm-1" for r in (await c.get("/api/rooms", headers=ok)).json())
     asyncio.run(go())
+
+
+
+def test_live2_ready_room_for_manual_typing():
+    """live2: live 와 같은 준비 상태(도윤만 비움)이고, 도윤이 대리 참석을 켜도 자동 진행이 돌지 않는다."""
+    async def go():
+        from app import autoplay
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://t") as c:
+            await c.delete("/api/rooms/live2")
+            assert (await c.post("/api/rooms", json={"room_id": "live2", "seed": "live"})).status_code == 200
+            room = hub.room("live2")
+            assert not room.personas["dy"].reports and not room.personas["dy"].mini_on
+            base = "/api/rooms/live2/members/dy"
+            ex = (await c.get(base)).json()["example"]
+            await c.post(base + "/reports", json={"title": ex["report_title"], "text": ex["report_text"]})
+            for q in (await c.post(base + "/interview/plan")).json()["questions"]:
+                st = (await c.post(base + f"/interview/{q['id']}/answer", json={"text": ex["answers"][q["issue_id"]]})).json()["stance"]
+                await c.post(base + f"/stances/{st['id']}/confirm", json={"ok": True})
+            await orchestrator.set_away("live2", "dy", True)
+            assert autoplay.snapshot("live2")["status"] == "idle"
+            msg, task = await orchestrator.handle_human("live2", "mj", LINES["a"])
+            await task
+            i = [m.id for m in room.messages].index(msg.id)
+            assert [m.meta.get("act") for m in room.messages[i + 1:] if m.kind == "mini"] == ["rebuttal"]
+            await asyncio.sleep(0.3)
+            assert autoplay.snapshot("live2")["status"] == "idle"
+            await c.delete("/api/rooms/live2")
+    asyncio.run(go())

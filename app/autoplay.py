@@ -24,6 +24,8 @@ PRESENTER = "dy"
 START_DELAY = 4.0                             # 대리 참석 안내가 뜨고 첫 대사까지
 SPEED = float(os.getenv("LIVE_AUTOPLAY_SPEED", "1.0") or 1.0)   # hold 배율 (1.0 = 대본 속도)
 ENABLED = os.getenv("LIVE_AUTOPLAY", "1") != "0"
+# 자동 진행 없이 사람이 직접 입력하는 방 (setup_live2.bat 이 만드는 연습 방)
+MANUAL_ROOMS = {r.strip() for r in os.getenv("LIVE_MANUAL_ROOMS", "live2").split(",") if r.strip()}
 
 LINES = {
     "a": "나는 공연이 축제의 얼굴이라 A안이 현실적이라고 봐.",
@@ -48,7 +50,7 @@ _skip: dict[str, asyncio.Event] = {}
 
 
 def is_live_room(room) -> bool:
-    return LIVE_UIDS <= set(room.personas)
+    return LIVE_UIDS <= set(room.personas) and room.room_id not in MANUAL_ROOMS
 
 
 def snapshot(room_id: str) -> dict:

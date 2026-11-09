@@ -29,6 +29,7 @@ class Candidate:
     cost: float = 0.0
     utility: float = 0.0
     called: bool = False
+    fresh: str = ""
     commit: bool = False
     excluded: str = ""          # 규칙 필터에서 빠진 이유
     act: str = "opinion"
@@ -125,10 +126,20 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
         expert = 1.0 if any(k and (k in msg.text or set(tokens(k)) & msg_toks) for k in p.profile.expertise) else 0.0
         c.rel = 1.0 if c.called else _clip(0.55 * stake + 0.3 * ev_ret + 0.15 * expert + 0.1 * is_q)
         content = stance.claim if stance else (c.hits[0].chunk.text if c.hits else "")
-        sim = max((text_similarity(content, strip_cites(m.text)) for m in recent), default=0.0)
+        said = [strip_cites(m.text) for m in recent]
+        sim = max((text_similarity(content, s) for s in said), default=0.0)
         c.nov = _clip(1 - (sim - 0.15) * 1.6)
-        if any(m.kind == "mini" and m.user_id == uid and m.issue_id == issue_id and issue_id
-               and not m.meta.get("abstain") for m in recent):
+        spoke_here = any(m.kind == "mini" and m.user_id == uid and m.issue_id == issue_id and issue_id
+                         and not m.meta.get("abstain") for m in recent)
+        # 이미 입장을 말했어도, 새 발언에 맞는 '아직 안 꺼낸 근거'가 있으면 그 근거로 새로 말할 수 있다
+        fresh = [h for h in c.hits if h.chunk.kind in ("report", "profile") and h.strength >= config.EVIDENCE_MIN
+                 and max((text_similarity(h.chunk.text, s) for s in said), default=0.0) < 0.35]
+        if fresh:
+            f_sim = max((text_similarity(fresh[0].chunk.text, s) for s in said), default=0.0)
+            f_nov = _clip(1 - (f_sim - 0.15) * 1.6)
+            if f_nov > c.nov:
+                c.nov, c.fresh = f_nov, fresh[0].chunk.label
+        if spoke_here and not c.fresh:
             c.nov *= 0.5
         if msg_pos and c.position:
             c.diff = 1.0 if msg_pos != c.position else 0.2
@@ -199,7 +210,12 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
                 if second.utility >= config.GATE_HIGH - 0.08 and second.ev >= config.EVIDENCE_MIN:
                     actions.append({"uid": second.uid, "type": "speak", "act": second.act})
         else:
-            zone, reason = "none", ("대리 참석 중인 미니미가 없음" if not cands else "모든 후보가 규칙 필터에서 제외됨")
+            zone, reason = "none", ("대리 참석 중인 미니미가 없음" if not cands else
+                                    "모든 후보가 규칙 필터에서 제외됨 (" + ", ".join(f"{c.name}: {_excl_ko(c.excluded)}" for c in cands) + ")")
+        if not actions and zone in ("low", "mid") and cands:
+            why = _silence_why(sorted([c for c in cands if not c.excluded], key=lambda c: -c.utility)[0])
+            if why:
+                reason += f" · {why}"
 
     return {
         "type": "gate", "msg_id": msg.id, "ts": time.time(), "issue_id": issue_id, "msg_position": msg_pos,
@@ -209,6 +225,23 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
                        "evidence_min": config.EVIDENCE_MIN},
         "_hits": {c.uid: c.hits for c in cands},
     }
+
+
+def _excl_ko(x: str) -> str:
+    return {"쿨다운": f"방금 말해서 {config.COOLDOWN_SEC:g}초 쉬는 중", "연속 발언 금지": "바로 앞 말이 자기 말"}.get(x, x)
+
+
+def _silence_why(c: Candidate) -> str:
+    """침묵 이유를 사람 말로: 가장 크게 깎인 요인 하나."""
+    if c.ev < config.EVIDENCE_MIN:
+        return f"{c.name} 미니미: 이 말에 맞는 근거가 자료에 없음"
+    if c.nov < 0.4:
+        return f"{c.name} 미니미: 이미 한 말이라 반복하지 않음 (새로움 {c.nov:.2f})"
+    if c.diff < 0.5:
+        return f"{c.name} 미니미: 같은 입장이라 덧붙일 게 적음"
+    if c.rel < 0.4:
+        return f"{c.name} 미니미: 자기 입장과 관련이 적음"
+    return ""
 
 
 _GATE_SCHEMA = {"type": "object", "required": ["speak", "who"],

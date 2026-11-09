@@ -65,7 +65,7 @@ GATE_MODE = os.getenv("GATE_MODE", "hybrid").lower()     # rule | hybrid | llm  
 GATE_HIGH = _f("GATE_HIGH", 0.42)      # 이 이상이면 규칙만으로 '말한다'
 GATE_LOW = _f("GATE_LOW", 0.22)        # 이 이하면 규칙만으로 '침묵'. 사이 구간만 모델에게 묻는다
 GATE_MID = _f("GATE_MID", 0.32)        # 모델이 없을 때 사이 구간의 기준
-COOLDOWN_SEC = _f("COOLDOWN_SEC", 12)  # 같은 미니미가 다시 말하기까지 최소 간격
+COOLDOWN_SEC = _f("COOLDOWN_SEC", 8)  # 같은 미니미가 다시 말하기까지 최소 간격
 TYPING_WAIT_SEC = _f("TYPING_WAIT_SEC", 2.5)  # 사람이 입력 중이면 이만큼까지 기다린다
 
 # ---------------------------------------------------------------- 근거 (M1)

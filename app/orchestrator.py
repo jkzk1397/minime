@@ -195,7 +195,7 @@ async def handle_human(room_id: str, uid: str, text: str, meta: dict | None = No
             await start_meeting(room_id)
         dist = agenda.distance(room, text)              # M4 안건 거리 (LLM 없음)
         issue_id, _ = agenda.detect_issue(room, text)
-        if not issue_id and (dist is None or dist < config.DRIFT_THRESHOLD):
+        if not issue_id and (called or dist is None or dist < config.DRIFT_THRESHOLD):   # '도윤 미니미는 어떻게 생각해?' → 지금 쟁점
             issue_id = room.current_issue                 # 쟁점 단서가 없으면 지금 논의 중인 쟁점으로 본다 (잡담은 제외)
         issue = room.issue(issue_id)
         position = agenda.stance_position(issue, text)

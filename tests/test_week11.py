@@ -82,3 +82,41 @@ async def _flow():
 
 def test_three_situations():
     asyncio.run(_flow())
+
+
+async def _seeded_flow():
+    """주소 /?room=week11 로 들어가면 생기는 시험용 방에서도 같은 세 상황이 그대로 나온다."""
+    rid = "week11"
+    with TestClient(app) as c:
+        c.delete(f"/api/rooms/{rid}")
+        d = c.get(f"/api/rooms/{rid}").json()
+        assert [m["name"] for m in d["members"]["members"]] == ["민수", "지연", "도윤"]
+    room = hub.room(rid)
+    assert room.personas["ms"].mini_on and len(room.personas["ms"].confirmed()) >= 2
+
+    _, t = await orchestrator.handle_human(rid, "jy", "오늘은 1차 출시 기능 범위부터 정하자. 민수 미니미, 1차 출시는 어떻게 하자는 의견이야?")
+    await t
+    said = [m for m in room.messages if m.kind == "mini" and not m.meta.get("abstain")]
+    assert said and "3개 기능" in said[-1].text and said[-1].meta["citations"]
+    _, t = await orchestrator.handle_human(rid, "jy", "그럼 1차 출시는 3개 기능으로 가자.")
+    await t
+    assert room.decisions[-1].status == "pending" and room.decisions[-1].affected == ["ms"]
+
+    wrong, t = await orchestrator.handle_human(rid, "dy", "민수 제안서에는 1차 출시를 5개 기능으로 한다고 적혀 있었어.")
+    await t
+    c0 = (await orchestrator.request_verify(rid, "jy", wrong.id)).meta["claims"][0]
+    assert c0["verdict"] == "conflict" and "3개 기능" in c0["note"] and "p.2" in c0["note"]
+
+    _, t = await orchestrator.handle_human(rid, "dy", "민수 미니미, 중간발표를 금요일로 바꿔도 괜찮아?")
+    await t
+    assert [m for m in room.messages if m.kind == "mini"][-1].meta.get("abstain") == "no_evidence"
+    assert any("금요일" in q.text for q in room.personas["ms"].questions)
+    _, t = await orchestrator.handle_human(rid, "jy", "그럼 중간발표는 금요일로 바꾸자.")
+    await t
+    assert room.decisions[-1].status == "pending"
+    with TestClient(app) as c:
+        c.delete(f"/api/rooms/{rid}")
+
+
+def test_seeded_week11_room():
+    asyncio.run(_seeded_flow())

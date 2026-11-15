@@ -61,6 +61,9 @@ class Hub:
                 if room_id == "demo":
                     from .seed import seed_room
                     seed_room(room)
+                elif room_id == "week11":                  # 11주차 시험용 방 (정상·오류·확인 불가)
+                    from .seed import seed_week11_room
+                    seed_week11_room(room)
             for persona in room.personas.values():
                 persona.touch()
             self.rooms[room_id] = room

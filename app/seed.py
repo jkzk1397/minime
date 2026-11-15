@@ -185,7 +185,10 @@ def seed_room(room: Room) -> Room:
 
 def fresh_room(room_id: str) -> Room:
     r = Room(room_id=room_id)
-    seed_room(r)
+    if room_id == WEEK11_ROOM:
+        seed_week11_room(r)
+    else:
+        seed_room(r)
     r.meeting["seeded_at"] = time.time()
     return r
 
@@ -241,6 +244,48 @@ def seed_live_room(room: Room) -> Room:
     room.agenda = "축제 예산 제안 발표 준비 (A안 공연 유지 · B안 학생 참여 확대)"
     room.issues = [Issue(i.id, i.title, [dict(o) for o in i.options], keywords=list(i.keywords)) for i in LIVE_ISSUES]
     room.personas = {p.user_id: p for p in live_personas()}
+    for p in room.personas.values():
+        p.touch()
+    return room
+
+
+# ================================================================ 11주차 과제: 정상·오류·확인 불가 시험용 방
+# 주소 /?room=week11 로 들어가면 바로 만들어진다. 민수(가상 인물)는 불참이라 미니미가 대리 참석하고,
+# 지연·도윤 자리로 들어가 docs/08-11주차-시험-대본.md 의 문장을 그대로 치면 세 상황을 다시 볼 수 있다.
+# tests/test_week11.py 와 같은 자료·쟁점이다. 제안서는 시험용으로 만든 자료다.
+WEEK11_ROOM = "week11"
+AUTO_ROOMS = ("demo", WEEK11_ROOM)          # 주소로 들어오면 자동으로 채워지는 방
+WEEK11_PAGES = [
+    "MINIME 1차 출시 계획 제안서 (시험용 자료). 팀 프로젝트 회의에 빠진 팀원의 의견을 근거와 함께 전달하는 서비스의 1차 출시 범위를 제안한다.",
+    "1차 출시는 자료 업로드, 근거 기반 발언, 회의 요약 3개 기능으로 진행해야 한다고 생각한다. 기능을 더 늘리면 중간발표 전까지 검증할 시간이 부족하다.\n\n"
+    "음성 브리핑은 2차 출시로 미루는 것이 좋다고 생각한다. 1차 출시에서는 글로 된 회의 요약만 제공한다.",
+    "예산안에는 찬성한다. 다만 예산은 20만 원 이하일 때에만 찬성한다.",
+]
+
+
+def seed_week11_room(room: Room) -> Room:
+    from . import persona as P
+
+    seed_room(room)                                  # 메시지·결정·회의 상태를 비운다
+    room.title = "11주차 시험용 방"
+    room.agenda = "MINIME 1차 출시 계획 정하기"
+    room.issues = [
+        Issue("i1", "1차 출시 기능 범위", [{"label": "3개 기능", "keywords": ["3개 기능"]},
+                                     {"label": "5개 기능", "keywords": ["5개 기능"]}]),
+        Issue("i2", "음성 브리핑 출시 시기"),
+        Issue("i3", "예산안"),
+    ]
+    ms = Persona("ms", "민수", "기획", 0, Profile(intro="1차 출시 계획 제안서를 썼어요. 오늘 회의는 불참이에요."))
+    jy = Persona("jy", "지연", "진행", 1, Profile(intro="오늘 회의를 진행해요."))
+    dy = Persona("dy", "도윤", "개발", 2, Profile(intro="개발을 맡고 있어요."))
+    room.personas = {p.user_id: consent_all(p) for p in (ms, jy, dy)}
+    paras, nums = P.split_pages(WEEK11_PAGES)
+    rep = P.add_report(room, ms, "제안서(시험용)", "\n\n".join(paras), "pdf", nums)
+    labels = [P.report_label(ms, 0, i) for i in range(len(rep.paragraphs))]
+    ms.stances = P._rule_extract(room, rep, labels)   # 모델 없이 문장 그대로 뽑는다 (시험할 때마다 같은 카드)
+    for s in ms.stances:
+        s.status = "confirmed"                        # 민수 본인이 확인한 것으로 둔다
+    ms.mini_on, ms.away_marker, ms.away_since = True, 0, time.time()
     for p in room.personas.values():
         p.touch()
     return room

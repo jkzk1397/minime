@@ -109,7 +109,7 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 def _room(room_id: str):
     if not ROOM_RE.match(room_id):
         raise HTTPException(400, "방 이름은 영문·숫자·-·_ 32자 이내예요.")
-    if room_id != "demo" and not hub.exists(room_id):
+    if room_id not in seed.AUTO_ROOMS and not hub.exists(room_id):
         raise HTTPException(404, "없는 방이에요. '새 회의방 만들기'로 먼저 만들어 주세요.")
     return hub.room(room_id)
 
@@ -221,7 +221,7 @@ async def reset_room(room_id: str, body: ResetIn, request: Request):
     old = _room(room_id)
     autoplay.stop(room_id, clear=True)
     demo.stop(room_id)
-    if body.seed:
+    if body.seed or room_id == seed.WEEK11_ROOM:         # 시험용 방은 대화만 지워도 처음 상태(민수 불참)로 되돌린다
         fresh = seed.fresh_room(room_id)
     else:
         from .models import Room
@@ -827,7 +827,7 @@ async def ws_room(ws: WebSocket, room_id: str, uid: str):
     if not ROOM_RE.match(room_id) or not UID_RE.match(uid):
         await ws.close(code=4400)
         return
-    if room_id != "demo" and not hub.exists(room_id):
+    if room_id not in seed.AUTO_ROOMS and not hub.exists(room_id):
         await ws.accept()
         await ws.send_json({"type": "error", "code": "unknown_member", "text": "없는 방이에요."})
         await ws.close(code=4404)

@@ -208,9 +208,10 @@ def written_to_spoken(sentence: str) -> str:
 COMMIT = re.compile(r"(맡아\s?줄|맡을\s?수|맡아\s?줘|맡아\s?줄래|맡을래|해\s?줄\s?수|해\s?줄래|해\s?줘|할\s?수\s?있(?:지|어|냐|나|죠)|"
                     r"정해\s?줄|정해\s?줘|약속|책임지|언제까지|마감|확정해|해\s?줄\s?거지|가능하지|가능해\?|되지\?|올\s?수\s?있)")
 QUESTION = re.compile(r"(\?|까$|까\?|니\?|냐|어때|어떻게 생각|생각은|의견은|알아봤|있어\?|했어\?|어땠)")
-DECISION = re.compile(r"(으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정|확정|정하자|그렇게\s?하자|합시다|결론|"
+_CHANGE = r"으?로\s?(?:바꾸자|바꿉시다|바꾸죠|옮기자|옮깁시다|미루자|미룹시다|변경하자|변경합시다)"
+DECISION = re.compile(r"(" + _CHANGE + r"|으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정|확정|정하자|그렇게\s?하자|합시다|결론|"
                       r"으?로\s?정해|이대로\s?가|하기로|맡는\s?걸로|맡기로)")
-DECISION_STRONG = re.compile(r"(으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정하|확정|결론|이대로\s?가|하기로|맡는\s?걸로|"
+DECISION_STRONG = re.compile(r"(" + _CHANGE + r"|으?로\s?하자|으?로\s?가자|하는\s?걸로|가는\s?걸로|결정하|확정|결론|이대로\s?가|하기로|맡는\s?걸로|"
                              r"맡기로|으?로\s?정하자|으?로\s?정해|으?로\s?(해요|가요|합시다|하죠|가죠|갑시다))")
 FACT_Q = re.compile(r"(알아봤|몇\s?(명|개|번|시|일|원|%|곳|팀)?|언제|얼마|어디|누가|누구|업체|날짜|정확히|구체적으로)")
 OPINION_Q = re.compile(r"(생각|의견|어때|어떻게\s?(봐|보|생각)|입장|찬성|반대|동의|괜찮|어느\s?쪽|싶은|싶어|원하|원해|맡고|맡을|선호)")
@@ -288,6 +289,23 @@ def numbers(text: str) -> list[tuple[float, str, str]]:
         before = re.findall(r"[가-힣A-Za-z]+", text[max(0, m.start() - 14): m.start()])
         subject = _JOSA_TAIL.sub("", before[-1]) if before else ""
         out.append((v, unit, subject))
+    return out
+
+
+def numbers_after(text: str) -> list[tuple[float, str, str]]:
+    """'5개 기능으로' → [(5.0, '개', '기능')]. 숫자 뒤에 바로 오는 명사(무엇이 몇 개인지)를 함께 돌려준다."""
+    out = []
+    for m in _NUM.finditer(text):
+        nxt = re.match(r"\s?([가-힣A-Za-z]{2,})", text[m.end():])
+        if not nxt:
+            continue
+        noun = _JOSA_TAIL.sub("", nxt.group(1))
+        try:
+            v = float(m.group(1).replace(",", "")) * _MULT.get(m.group(2) or "", 1)
+        except ValueError:
+            continue
+        if len(noun) >= 2:
+            out.append((v, "%" if m.group(3) == "퍼센트" else m.group(3), noun))
     return out
 
 

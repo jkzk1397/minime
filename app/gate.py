@@ -30,6 +30,7 @@ class Candidate:
     utility: float = 0.0
     called: bool = False
     fresh: str = ""
+    off_topic: bool = False     # 불러서 물었지만 질문 내용이 입장·자료에 없음 → 확인 필요로 남긴다
     commit: bool = False
     excluded: str = ""          # 규칙 필터에서 빠진 이유
     act: str = "opinion"
@@ -158,6 +159,10 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
             c.act = "agree_add"
         elif q_kind == "fact":
             c.act = "answer"
+        # 사실 질문은 위의 근거 점수(ev_ret)가 걸러 준다. 의견을 묻는 호출은 입장 카드 점수가 높아서 따로 본다
+        if (c.called and not c.commit and q_kind != "fact"
+                and not _covers(query, stance, c.hits, room.issue(issue_id) if issue_id else None)):
+            c.off_topic = True
         cands.append(c)
 
     actions: list[dict] = []
@@ -166,7 +171,7 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
     for c in [c for c in cands if c.called]:
         if c.commit:
             actions.append({"uid": c.uid, "type": "abstain", "reason": "commit", "act": "answer", "called": True})
-        elif c.ev < config.EVIDENCE_MIN:
+        elif c.ev < config.EVIDENCE_MIN or c.off_topic:
             actions.append({"uid": c.uid, "type": "abstain", "reason": "no_evidence", "act": "answer", "called": True})
         else:
             actions.append({"uid": c.uid, "type": "speak", "act": c.act, "called": True})
@@ -225,6 +230,27 @@ async def evaluate(room: Room, msg: Message, issue_id: str, msg_pos: str, typing
                        "evidence_min": config.EVIDENCE_MIN},
         "_hits": {c.uid: c.hits for c in cands},
     }
+
+
+_GENERIC_Q = {"생각", "의견", "입장", "어떻", "어때", "괜찮", "하", "되", "있", "없", "좋", "같", "보", "말", "것", "거", "수", "때",
+              "오늘", "지금", "우리", "이번", "그럼", "혹시", "정하", "알", "주"}
+
+
+def _covers(query: str, stance, hits: list[Hit], issue) -> bool:
+    """질문의 내용어가 확인된 입장 카드·쟁점·근거 문단에 얼마나 들어 있는지 본다.
+    '중간발표를 금요일로 바꿔도 괜찮아?'처럼 입장 카드에도 자료에도 없는 내용을 물으면(내용어 2개 이상이 비고
+    절반 이상이 비면) False → 지금 쟁점의 입장으로 대신 답하지 않고 '확인 필요'로 남긴다."""
+    q = [t for t in dict.fromkeys(tokens(query)) if t not in _GENERIC_Q and (len(t) > 1 or t.isdigit())]
+    q = [t for t in q if not any(u != t and u in t for u in q)]          # 붙은 명사('중간발표')는 낱말('중간', '발표')로만 센다
+    if len(q) < 2:
+        return True
+    text = " ".join([stance.claim, stance.reasons, stance.red_line, stance.position] if stance else [])
+    if issue:
+        text += " " + issue.title + " " + " ".join(o["label"] for o in issue.options)
+    text += " " + " ".join(h.chunk.text for h in hits if h.strength >= config.EVIDENCE_MIN)
+    have = set(tokens(text))
+    missing = [t for t in q if t not in have]
+    return not (len(missing) >= 2 and len(missing) / len(q) >= 0.5)
 
 
 def _excl_ko(x: str) -> str:

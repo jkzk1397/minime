@@ -161,7 +161,8 @@ async def run(room: Room, requester: str, target: Message) -> dict:
     if "weak" in vs or "none" in vs:
         labels.append("근거 약함")
     if "conflict" in vs:
-        labels.append("이전 발언과 충돌")
+        numeric = all((c["conflicts"] or [{}])[0].get("numeric") for c in claims if c["verdict"] == "conflict")
+        labels.append("자료와 숫자가 다름" if numeric else "이전 발언과 충돌")
     if missed:
         labels.append("놓친 점")
     if devil:
@@ -207,6 +208,18 @@ def _numeric_mismatch(claim: str, hits: list[Hit]) -> dict | None:
     nums = ko.numbers(claim)
     if not nums:
         return None
+    # '5개 기능' ↔ '3개 기능': 숫자 뒤에 오는 명사가 같은데 값이 다르면 충돌
+    after = ko.numbers_after(claim)
+    for h in hits:
+        if h.strength < 0.1:
+            continue
+        ev_after = ko.numbers_after(h.chunk.text)
+        for v, unit, noun in after:
+            same = [x for x in ev_after if x[1] == unit and x[2] == noun]
+            if same and not any(abs(x[0] - v) <= max(0.01 * v, 1e-6) for x in same):
+                shown = ", ".join(f"{x[0]:g}{x[1]} {x[2]}" for x in same[:3])
+                return {"label": h.chunk.label, "text": h.chunk.text, "source": "number", "position": "",
+                        "strength": 1.0, "numeric": f"주장 {v:g}{unit} {noun} ↔ 자료 {shown}"}
     for h in hits:
         if h.strength < 0.1:
             continue

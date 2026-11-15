@@ -179,7 +179,8 @@ def split_report(text: str) -> list[str]:
         paras = [x.strip() for x in text.split("\n") if x.strip()]
     out = []
     for para in paras:
-        para = re.sub(r"^[-*•\d.)\s]+", "", para).strip()
+        # 목록 표시('- ', '1. ', '2) ')만 지운다. '1차 출시는…'처럼 숫자로 시작하는 문장의 숫자는 남긴다
+        para = re.sub(r"^(?:[-*•]\s+|\d{1,2}[.)]\s+)+", "", para.strip()).strip()
         if len(para) <= 420:
             out.append(para)
             continue
@@ -464,7 +465,10 @@ def _rule_sentences(p: Persona, act: str, trigger: str, stance: Stance | None, l
                 sent = st.claim if st else best_sentence(top.chunk.text, trigger)
             else:
                 sent = ko.polite(best_sentence(top.chunk.text, trigger))
-            out.append({"text": sent, "cites": [top.chunk.label], "support": 1.0})
+            # 고른 문장이 질문과 겹치는 낱말이 하나도 없으면(문서 제목 줄 등) 근거로 내세우지 않고 입장 카드만 말한다
+            related = bool(set(tokens(trigger)) & set(tokens(sent)))
+            if related or not stance:
+                out.append({"text": sent, "cites": [top.chunk.label], "support": 1.0})
             if stance and labels.get(stance.id) != top.chunk.label and text_similarity(stance.claim, sent) < 0.5:
                 out.append({"text": stance.claim, "cites": [labels[stance.id]], "support": 1.0})
         return out[:2]

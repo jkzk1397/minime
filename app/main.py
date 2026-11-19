@@ -332,8 +332,10 @@ async def member_detail(room_id: str, uid: str):
     room, p = _member(room_id, uid)
     labels = persona.stance_labels(p)
     d = asdict(p)
-    for s in d["stances"]:
+    for s, stance in zip(d["stances"], p.stances):
         s["label"] = labels.get(s["id"], "")
+        if s["origin"] == "memo":
+            s["delivery_status"] = sources.memo_delivery_status(room, p, stance)
         issue = room.issue(s["issue_id"])
         s["issue_title"] = issue.title if issue else ""
     for r in d["reports"]:
@@ -390,13 +392,13 @@ class ReportIn(BaseModel):
     title: str = ""
     text: str
     source: str = "text"
-    pages: list[str] | None = None                       # 파일 미리보기에서 받은 쪽(슬라이드)별 글 (고치지 않았을 때만)
+    pages: list[str] | None = None                       # 파일 미리보기에서 받은 쪽(슬라이드)별 글
 
 
 async def _add_report(room_id: str, uid: str, title: str, text: str, source: str = "text",
                       pages: list[str] | None = None) -> dict:
     room, p = _member(room_id, uid)
-    if len(text) > 30000:
+    if (sum(map(len, pages)) if pages is not None else len(text)) > 30000:
         raise HTTPException(400, "자료가 너무 길어요 (3만 자 이내). 안건과 관련된 부분만 남겨 주세요.")
     try:
         if pages:                                        # 쪽(슬라이드)별 글을 받았으면 문단마다 쪽 번호를 붙인다
@@ -631,6 +633,7 @@ async def set_consent(room_id: str, uid: str, body: ConsentIn):
 # ---------------------------------------------------------------- 미니미를 만드는 다른 방법 (문서 없이)
 class QuickItem(BaseModel):
     issue_id: str
+    clear: bool = False
     choice: str = ""
     reason: str = ""
     red_line: str = ""
@@ -646,7 +649,7 @@ async def quick_stances(room_id: str, uid: str, body: QuickIn):
     """빠른 입장 체크: 쟁점마다 선택지·이유·조건을 고른 그대로 확인된 입장 카드로."""
     room, p = _member(room_id, uid)
     created, replaced = sources.quick(room, p, [i.model_dump() for i in body.items[:12]])
-    if not created:
+    if not created and not replaced:
         raise HTTPException(400, "고른 쟁점이 없어요. 선택지를 고르거나 이유를 한 줄 적어 주세요.")
     await orchestrator.after_persona_change(room_id)
     return {"created": len(created), "replaced": len(replaced), "member": await member_detail(room_id, uid)}
@@ -682,9 +685,9 @@ async def import_chat(room_id: str, uid: str, body: ChatIn):
     if len(lines) < 2:
         raise HTTPException(400, "가져올 내 말이 거의 없어요. 대화방에서 내 이름을 맞게 골랐는지 확인해 주세요.")
     stances, engine = await sources.chat_candidates(room, p, lines)
-    sources.import_chat(room, p, lines, stances, body.source)
+    saved = sources.import_chat(room, p, lines, stances, body.source)
     await orchestrator.after_persona_change(room_id)
-    return {"lines": len(lines), "candidates": len(stances), "engine": engine,
+    return {"lines": len(lines), **saved, "candidates": len(stances), "engine": engine,
             "member": await member_detail(room_id, uid)}
 
 

@@ -17,7 +17,7 @@ import io
 import re
 import time
 import zipfile
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 from . import config, ko, llm
 from .agenda import detect_issue, detect_position, issue_lexicon, stance_position
@@ -54,6 +54,12 @@ def quick(room: Room, p: Persona, items: list[dict]) -> tuple[list[Stance], list
     for it in items:
         issue = room.issue(str(it.get("issue_id") or ""))
         if issue is None:
+            continue
+        if it.get("clear") is True:
+            for old in p.confirmed(issue.id):
+                if old.origin == "quick":
+                    old.status = "rejected"
+                    replaced.append(old)
             continue
         choice = str(it.get("choice") or "").strip()[:30]
         reason = str(it.get("reason") or "").strip()[:200]
@@ -97,6 +103,16 @@ def add_memo(room: Room, p: Persona, text: str, issue_id: str = "") -> Stance:
     return st
 
 
+def memo_delivery_status(room: Room, p: Persona, memo: Stance) -> str:
+    """Report the delivery state for the current meeting."""
+    started = room.meeting.get("started_at")
+    if not started or room.meeting.get("status") != "live":
+        return "waiting_for_meeting"
+    if p.memo_log.get(memo.id) == started:
+        return "delivered"
+    return "pending"
+
+
 def memos_to_deliver(room: Room, p: Persona, issue_id: str) -> list[Stance]:
     """지금 쟁점(또는 쟁점 없는 메모)에 해당하고 이번 회의에서 아직 전하지 않은 메모."""
     started = room.meeting.get("started_at") or 0
@@ -122,7 +138,7 @@ def clean_lines(lines: list) -> list[dict]:
         if not isinstance(x, dict):
             continue
         t = re.sub(r"\s+", " ", str(x.get("text") or "")).strip()[:300]
-        if len(t) < 4 or skip.match(t):
+        if not t or skip.match(t):
             continue
         out.append({"text": t, "when": str(x.get("when") or "")[:40]})
     return out[-MAX_CHAT_LINES:]
@@ -210,17 +226,27 @@ async def chat_candidates(room: Room, p: Persona, lines: list[dict]) -> tuple[li
     return out, engine
 
 
-def import_chat(room: Room, p: Persona, lines: list[dict], stances: list[Stance], source: str) -> None:
+def import_chat(room: Room, p: Persona, lines: list[dict], stances: list[Stance], source: str) -> dict[str, int]:
     """내 말은 '지난 발언'으로 남겨 2차 검증(이전 발언과 충돌)에 쓰고, 초안 카드는 같은 쟁점의 예전 초안을 바꾼다."""
     when = {"kakao": "단톡방", "slack": "슬랙", "discord": "디스코드"}.get(source, "채팅")
+    seen = {(row.get("text"), row.get("when")) for row in p.past}
+    added = skipped = 0
     for ln in lines[-80:]:
+        stamp = f"{when} {ln['when']}".strip()
+        key = (ln["text"], stamp)
+        if ln["when"] and key in seen:
+            skipped += 1
+            continue
         issue_id, _ = detect_issue(room, ln["text"])
-        p.past.append({"text": ln["text"], "issue_id": issue_id, "when": f"{when} {ln['when']}".strip()})
+        p.past.append({"text": ln["text"], "issue_id": issue_id, "when": stamp})
+        seen.add(key)
+        added += 1
     p.past = p.past[-200:]
     ids = {s.issue_id for s in stances}
     p.stances = [s for s in p.stances if not (s.status == "candidate" and s.origin == "chat" and s.issue_id in ids)]
     p.stances.extend(stances)
     p.touch()
+    return {"added": added, "duplicates": skipped}
 
 
 # ---------------------------------------------------------------- 4. 자료 파일 → 글 (쪽 번호 포함)
@@ -360,31 +386,59 @@ def _match_issue(room: Room, st: dict) -> str:
 def import_persona(room: Room, p: Persona, data: dict) -> dict:
     if not isinstance(data, dict) or data.get("kind") != EXPORT_KIND:
         raise ValueError("MINIME에서 내보낸 미니미 파일이 아니에요.")
-    prof = data.get("profile") or {}
+    prof = data.get("profile", {})
+    reports = data.get("reports", [])
+    stances = data.get("stances", [])
+    if not isinstance(prof, dict):
+        raise ValueError("프로필은 객체여야 해요.")
+    if not isinstance(reports, list) or not all(isinstance(r, dict) for r in reports):
+        raise ValueError("자료는 객체 목록이어야 해요.")
+    if not isinstance(stances, list) or not all(isinstance(s, dict) for s in stances):
+        raise ValueError("입장 카드는 객체 목록이어야 해요.")
+
+    # Prepare all changes before mutating the live persona.
+    profile = replace(p.profile)
+    new_reports: list[Report] = []
+    new_stances: list[Stance] = []
     for key, n, ln in (("expertise", 8, 20), ("criteria", 3, 40), ("projects", 3, 160), ("tone_examples", 3, 80)):
-        vals = [str(x).strip()[:ln] for x in prof.get(key, []) if str(x).strip()][:n]
-        if vals and not getattr(p.profile, key):
-            setattr(p.profile, key, vals)
-    if prof.get("intro") and not p.profile.intro:
-        p.profile.intro = str(prof["intro"])[:120]
-    added_r = 0
+        field = prof.get(key, [])
+        if not isinstance(field, list) or not all(isinstance(x, str) for x in field):
+            raise ValueError(f"{key}는 문자열 목록이어야 해요.")
+        vals = [x.strip()[:ln] for x in field if x.strip()][:n]
+        if vals and not getattr(profile, key):
+            setattr(profile, key, vals)
+    if prof.get("intro") and not profile.intro:
+        profile.intro = str(prof["intro"])[:120]
     have = {tuple(r.paragraphs) for r in p.reports}
-    for r in (data.get("reports") or [])[:5]:
-        paras = [str(x)[:600] for x in (r.get("paragraphs") or []) if str(x).strip()][:40]
+    for r in reports[:5]:
+        raw = r.get("paragraphs", [])
+        if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+            raise ValueError("자료의 문단은 문자열 목록이어야 해요.")
+        kept = [(i, x[:600]) for i, x in enumerate(raw) if x.strip()][:40]
+        paras = [text for _, text in kept]
         if paras and tuple(paras) not in have:
-            pages = [int(x) for x in (r.get("pages") or []) if str(x).isdigit()]
-            p.reports.append(Report(new_id("r"), str(r.get("title") or "불러온 자료")[:60], paras, source="import",
-                                    pages=pages if len(pages) == len(paras) else []))
-            added_r += 1
-    added_s = 0
-    for st in (data.get("stances") or [])[:30]:
+            raw_pages = r.get("pages") or []
+            pages = []
+            if (isinstance(raw_pages, list) and len(raw_pages) == len(raw)
+                    and all(type(n) is int and n > 0 for n in raw_pages)):
+                pages = [raw_pages[i] for i, _ in kept]
+            new_reports.append(Report(new_id("r"), str(r.get("title") or "불러온 자료")[:60],
+                                      paras, source="import", pages=pages))
+            have.add(tuple(paras))
+    for st in stances[:30]:
         claim = str(st.get("claim") or "").strip()[:300]
         if not claim:
             continue
-        p.stances.append(Stance(new_id("s"), _match_issue(room, st), claim, str(st.get("position") or "")[:20],
+        priority = st.get("priority", 2)
+        if type(priority) is not int or not 1 <= priority <= 3:
+            raise ValueError("입장 카드의 priority는 1~3 정수여야 해요.")
+        new_stances.append(Stance(new_id("s"), _match_issue(room, st), claim, str(st.get("position") or "")[:20],
                                 str(st.get("reasons") or "")[:300], str(st.get("warrant") or "")[:200],
                                 str(st.get("red_line") or "")[:200], str(st.get("unknown") or "")[:200],
-                                max(1, min(3, int(st.get("priority") or 2))), ["지난 미니미"], "candidate", "import"))
-        added_s += 1
+                                priority, ["지난 미니미"], "candidate", "import"))
+
+    p.profile = profile
+    p.reports.extend(new_reports)
+    p.stances.extend(new_stances)
     p.touch()
-    return {"reports": added_r, "stances": added_s}
+    return {"reports": len(new_reports), "stances": len(new_stances)}

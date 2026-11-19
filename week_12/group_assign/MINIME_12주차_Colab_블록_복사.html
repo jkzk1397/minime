@@ -1,0 +1,1682 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MINIME 12주차 Colab 복사용 최종 원고</title><style>
+:root{color-scheme:light;font-family:system-ui,"Malgun Gothic",sans-serif;color:#182940;background:#f1f5f9}
+*{box-sizing:border-box}html{scroll-padding-top:70px}body{margin:0}main{max-width:1080px;margin:auto;padding:36px 22px 80px}
+h1{margin:0;font-size:clamp(26px,4vw,42px);letter-spacing:-.045em}p{line-height:1.6;margin:10px 0 20px}
+nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:8px;margin-bottom:24px}
+nav a{color:inherit;text-decoration:none;display:grid;grid-template-columns:2.1em 1fr auto;gap:8px;align-items:center;background:white;border:1px solid #ced9e4;padding:10px;border-radius:8px;font-size:14px}
+nav a:hover{background:#e7f2f8}.index{font-variant-numeric:tabular-nums;font-weight:800;color:#346073}
+.kind{display:inline-block;background:#dff3ee;color:#115b4e;font-weight:750;padding:3px 8px;border-radius:5px;font-size:12px}
+.code,.is-code .kind{color:#49327b;background:#ece6fa}.block{background:white;border:2px solid #cddbe5;border-left:6px solid #328575;border-radius:13px;margin-bottom:20px;overflow:hidden}
+.block.is-code{border-left-color:#7758a6}.block:target{outline:3px solid #4099c5;outline-offset:2px}
+.block header{padding:14px 18px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:13px;border-bottom:1px solid #dbe3eb;background:#f9fbfd}
+.number{font-size:32px;line-height:1;font-weight:850;letter-spacing:-.05em}
+h2{margin:4px 0 0;font-size:clamp(15px,2vw,20px);letter-spacing:-.025em}
+button{border:0;color:white;background:#164864;border-radius:7px;font:inherit;font-size:14px;font-weight:750;padding:10px 14px;cursor:pointer}
+button:hover{background:#0c334a}button:focus-visible,a:focus-visible{outline:3px solid #268bd1;outline-offset:3px}.copied button{background:#17644f}
+pre{margin:0;padding:16px 20px 19px;font-family:"Malgun Gothic",system-ui,sans-serif;font-size:14px;line-height:1.66;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}
+.is-code pre{background:#f6f3fc;font-family:Consolas,monospace;white-space:pre;overflow:auto;line-height:1.53}
+.update-note{padding:12px 14px;border:1px solid #8ab7af;border-radius:8px;background:#e8f5f2}.update-note a{color:#125d50;font-weight:750}
+#status{position:sticky;top:0;z-index:1;min-height:38px;margin:0 0 16px;padding:8px 14px;border-radius:7px;background:#15394e;color:#fff;font-size:14px}
+@media(max-width:520px){main{padding-inline:12px}.block header{padding:12px 9px;gap:8px}button{padding:8px;font-size:12px}pre{padding:12px}}
+</style>
+<style>.is-code pre{max-height:27rem;overflow:auto}</style>
+<style id="preview-styles">
+[hidden]{display:none!important}
+.view-tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #cddbe5;padding:0 0 12px;margin:24px 0}
+.view-tabs button{background:#e1eaf0;color:#22465c}
+.view-tabs button[aria-selected="true"]{background:#164864;color:white}
+.preview-intro{padding:14px 18px;background:#e8f5f2;border:1px solid #8ab7af;border-radius:8px;line-height:1.7;margin-bottom:18px}
+.notebook-preview{background:white;border:1px solid #d8e2ec;border-radius:12px;padding:24px 30px;overflow:hidden}
+.preview-cell{padding:18px 0;border-bottom:1px solid #e6edf3;line-height:1.8;overflow-wrap:anywhere}
+.preview-cell:last-child{border-bottom:0}.preview-label{font-size:12px;color:#62788b;margin-bottom:10px}
+.notebook-preview h1{font-size:30px;line-height:1.45;margin:12px 0 22px}
+.notebook-preview h2{font-size:24px;line-height:1.5;margin:26px 0 16px}
+.notebook-preview h3{font-size:20px;line-height:1.5;margin:20px 0 12px}
+.notebook-preview p{margin:10px 0 16px;line-height:1.8}
+.notebook-preview ul,.notebook-preview ol{padding-left:26px;margin:12px 0 20px}
+.notebook-preview li{margin:5px 0}
+.notebook-preview blockquote{margin:16px 0;padding:4px 18px;border-left:4px solid #8eabc0;background:#f6f9fc;color:#334d61}
+.notebook-preview :not(pre)>code{font-family:Consolas,monospace;font-size:.93em;background:#edf1f6;border-radius:4px;padding:2px 5px}
+.notebook-preview pre{white-space:pre;overflow:auto;font:13px/1.65 Consolas,monospace;background:#f6f3fc;border:1px solid #e0d9ed;border-radius:8px;padding:18px;margin:12px 0}
+.notebook-preview pre code{font:inherit}.notebook-preview a{color:#176a9e}
+.table-scroll{overflow-x:auto;margin:16px 0}
+.notebook-preview table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.65}
+.notebook-preview th,.notebook-preview td{border:1px solid #d5dfe8;text-align:left;padding:10px 12px;min-width:90px;vertical-align:top}
+.notebook-preview th{background:#edf3f8}.notebook-preview tbody tr:nth-child(even){background:#f8fafc}
+@media(max-width:600px){.notebook-preview{padding:12px 16px}.notebook-preview h1{font-size:25px}.notebook-preview h2{font-size:21px}}
+</style>
+</head><body><main><h1>MINIME · 텍스트 입력으로 확인하는 다섯 개선</h1><p>번호 순서대로 Colab의 같은 유형 셀에 복사하세요. 각 담당 구역에서 문장을 직접 입력하고 기존·수정 출력을 비교합니다.</p><div class="view-tabs" role="tablist" aria-label="보기 방식">
+<button type="button" role="tab" id="tab-copy" aria-controls="panel-copy" aria-selected="true" tabindex="0">셀별 복사</button>
+<button type="button" role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="false" tabindex="-1">전체 미리보기</button>
+</div><div id="panel-copy" role="tabpanel" aria-labelledby="tab-copy"><nav><a href="#cell-01"><span class="index">01</span><span>프로젝트·개선 목표</span><span class="kind">텍스트</span></a><a href="#cell-02"><span class="index">02</span><span>역할·완료 기준·시험 자료</span><span class="kind">텍스트</span></a><a href="#cell-03"><span class="index">03</span><span>공통 준비 · 실제 함수 로딩과 결과 출력</span><span class="kind">코드</span></a><a href="#cell-04"><span class="index">04</span><span>김동준 · 목적과 AI 활용</span><span class="kind">텍스트</span></a><a href="#cell-05"><span class="index">05</span><span>김동준 · 실제 기존 코드와 입력 시험</span><span class="kind">코드</span></a><a href="#cell-06"><span class="index">06</span><span>김동준 · 수정 코드와 동일 입력 검증</span><span class="kind">코드</span></a><a href="#cell-07"><span class="index">07</span><span>김동준 · 결과 해석</span><span class="kind">텍스트</span></a><a href="#cell-08"><span class="index">08</span><span>김혜중 · 목적과 AI 활용</span><span class="kind">텍스트</span></a><a href="#cell-09"><span class="index">09</span><span>김혜중 · 실제 기존 코드와 입력 시험</span><span class="kind">코드</span></a><a href="#cell-10"><span class="index">10</span><span>김혜중 · 수정 코드와 동일 입력 검증</span><span class="kind">코드</span></a><a href="#cell-11"><span class="index">11</span><span>김혜중 · 결과 해석</span><span class="kind">텍스트</span></a><a href="#cell-12"><span class="index">12</span><span>노재원 · 목적과 AI 활용</span><span class="kind">텍스트</span></a><a href="#cell-13"><span class="index">13</span><span>노재원 · 실제 기존 코드와 입력 시험</span><span class="kind">코드</span></a><a href="#cell-14"><span class="index">14</span><span>노재원 · 수정 코드와 동일 입력 검증</span><span class="kind">코드</span></a><a href="#cell-15"><span class="index">15</span><span>노재원 · 결과 해석</span><span class="kind">텍스트</span></a><a href="#cell-16"><span class="index">16</span><span>송준서 · 목적과 AI 활용</span><span class="kind">텍스트</span></a><a href="#cell-17"><span class="index">17</span><span>송준서 · 실제 기존 코드와 입력 시험</span><span class="kind">코드</span></a><a href="#cell-18"><span class="index">18</span><span>송준서 · 수정 코드와 동일 입력 검증</span><span class="kind">코드</span></a><a href="#cell-19"><span class="index">19</span><span>송준서 · 결과 해석</span><span class="kind">텍스트</span></a><a href="#cell-20"><span class="index">20</span><span>정종원 · 목적과 AI 활용</span><span class="kind">텍스트</span></a><a href="#cell-21"><span class="index">21</span><span>정종원 · 실제 기존 코드와 입력 시험</span><span class="kind">코드</span></a><a href="#cell-22"><span class="index">22</span><span>정종원 · 수정 코드와 동일 입력 검증</span><span class="kind">코드</span></a><a href="#cell-23"><span class="index">23</span><span>정종원 · 결과 해석</span><span class="kind">텍스트</span></a><a href="#cell-24"><span class="index">24</span><span>교차 검증 · 추가 입력과 기록표</span><span class="kind">텍스트</span></a><a href="#cell-25"><span class="index">25</span><span>교차 검증 · 추가 문장 실행</span><span class="kind">코드</span></a><a href="#cell-26"><span class="index">26</span><span>프로젝트 통합과 최종 시험</span><span class="kind">텍스트</span></a><a href="#cell-27"><span class="index">27</span><span>실제 파일 반영과 통합본 시험</span><span class="kind">코드</span></a><a href="#cell-28"><span class="index">28</span><span>최종 결과·코드 위치·제출</span><span class="kind">텍스트</span></a></nav><div id="status" role="status">본문 복사 버튼으로 셀별 복사</div><section class="block" id="cell-01"><header><span class="number">01</span><div><span class="kind">텍스트 셀</span><h2>프로젝트·개선 목표</h2></div><button type="button" data-copy="01">본문 복사</button></header><pre id="body-01"># MINIME 12주차 · 입력 텍스트 처리 개선
+
+4조 생성까스 · 김동준, 김혜중, 노재원, 송준서, 정종원
+
+## STEP 1. 해결할 문제와 기대 결과 확정
+
+**1. 프로젝트의 목적과 현재 구현 상태**
+
+- 목적: 회의 불참자의 자료·입장을 바탕으로 대리 발언을 준비하고 사람의 결정을 보존
+- 형태: Python FastAPI·JavaScript 기반 로컬 웹 프로젝트
+- 구현 상태: 문서·채팅 입력을 정리하고 문단·쪽 번호·발언 자료로 사용하는 기능 구현
+- 확인된 보완점: 단독 CR 줄바꿈, 긴 문장 분할, 짧은 의견 보존, 문단 제한 뒤 반복, 일부 문장 기호 처리
+
+**2. 선택한 적용 방식과 해결할 문제**
+
+- 팀 적용 방식: **② 기존 기능 개선**
+- 해결할 문제: 입력 형식·글 길이·문장 기호에 따른 처리 차이와 내용 누락을 줄이고 불필요한 페이지 분리 중단
+- 작업 구성: 같은 개선 방향 안에서 독립된 다섯 수정 작업 배정
+
+**3. 작업이 필요한 이유**
+
+- 원자료 보존: 줄바꿈이나 글 길이 때문에 문단·짧은 의견이 누락되는 문제 방지
+- 기준 보완: 지원하는 문장 기호와 보존·제외할 입력을 명확하게 정의
+- 처리 효율: 결과가 이미 40문단에 도달한 뒤의 추가 페이지 분리 방지
+
+**4. 사용할 자료 또는 수정할 기존 코드**
+
+- 문서 입력: 같은 두 문장에 LF·CRLF·CR을 적용한 시험용 문자열
+- 긴 글 입력: 반복 문자 1000·721·420자 및 교차 시험 1081자
+- 채팅 입력: 찬성·반대·한 글자 의견·공백·사진·이모티콘·링크 안내
+- 페이지 입력: 한 쪽에 한 문단인 60쪽, 빈 첫 쪽과 둘째 쪽
+- 문장 입력: 。！？와 기존 .!? 뒤 공백 및 줄바꿈
+- 수정 코드: `app/persona.py`의 `split_report`·`split_pages`, `app/sources.py`의 `clean_lines`, `app/ko.py`의 `sentences`
+- 수정 전 보관: 기준 커밋 `cf389690fd36f457d7ddeab4ae2b323029d348aa`와 `BASE_TEXT`
+
+**5~6. 작업 후 기대 실행 결과·조원별 담당 범위와 완료 기준**
+
+| 이름 | 담당 구현·수정 작업과 범위 | 시험 입력 | 기대 출력·완료 기준 | 교차 검증자 |
+| --- | --- | --- | --- | --- |
+| 김동준 | split_report의 줄바꿈 정규화 구간 | 같은 두 문장에 LF·CRLF·CR 적용 | 세 입력 모두 같은 두 문단 목록 | 정종원 |
+| 김혜중 | split_report의 긴 문단 분할 구간 | 마침표 없는 1000자·721자·420자 | 1000자 → [360,360,280]자, 721자 → [360,361]자, 420자 유지. 조각마다 420자 이하·전체 원문 보존 | 김동준 |
+| 노재원 | clean_lines의 짧은 입력 제외 조건 | 찬성·반대·공백·사진·이모티콘·링크·정상 문장 | 찬성·반대·정상 문장만 남음. 교차 입력의 네·동의도 보존 | 김혜중 |
+| 송준서 | split_pages의 바깥 반복 종료 조건 | 한 쪽에 한 문단인 60쪽 | 40문단·쪽 번호 1~40 유지, 분리 호출 60회 → 40회 | 노재원 |
+| 정종원 | sentences의 문장 기호 집합 | 첫 문장。 다음 문장。 및 기호별 입력 | 공백 앞의 새 기호·기존 기호에서 두 문장 분리, 줄바꿈 처리 유지 | 송준서 |
+
+- 난이도·예상 시간: 1인당 구현·실행·연결·검토 약 1~2시간으로 배분
+- 통합 연결: 김동준·김혜중의 동일 함수 내 서로 다른 수정 구간을 함께 보존하고 다섯 변경 통합
+- 검증 범위: 문자열 처리 함수의 입력·출력 및 실제 파일 반영. 실제 PDF 추출·브라우저 클릭은 별도 범위
+
+**실행 환경 및 검증 방법**
+
+- 실행 환경: Google Colab, Python
+- 시험 자료: 코드 셀에 직접 입력한 시험용 문장·문자열
+- 실행 대상: 프로젝트의 실제 함수 원문
+- 실행 구성: `re`, 기존 문장 분리 함수, 채팅 상한값 400
+- 실행 조건: 앱 실행 및 외부 AI API 연결 불필요
+- 프로젝트 반영: 최종 단계에서 수정 코드를 실제 프로젝트 파일에 저장
+
+**AI 활용 및 기록 범위**
+
+- 사용 도구: Codex
+- 요청문: 담당 작업별 요구 사항을 정리하고 말투를 다듬은 프롬프트
+- 응답 기록: 구현 방법과 채택 판단
+- 코드 작성·자동 검증 수행: Codex
+- 조원 이름: 구현·검증 역할의 배정
+- 기록 범위: 조원별 직접 수행 여부를 입증하는 자료는 아님
+</pre></section><section class="block" id="cell-02"><header><span class="number">02</span><div><span class="kind">텍스트 셀</span><h2>역할·완료 기준·시험 자료</h2></div><button type="button" data-copy="02">본문 복사</button></header><pre id="body-02">## 역할 분담과 조원별 완료 기준
+
+| 이름 | 담당 구현·수정 작업 | 완료 기준 | 교차 검증자 |
+| --- | --- | --- | --- |
+| 김동준 | 줄바꿈 통일 | LF·CRLF·CR의 문단 결과 동일 | 정종원 |
+| 김혜중 | 긴 문단 분할 | 각 조각 420자 이하, 시험 원문 전체 보존 | 김동준 |
+| 노재원 | 짧은 채팅 보존 | 찬성·반대 보존, 빈 입력·안내 제외 | 김혜중 |
+| 송준서 | 반복 처리 조기 종료 | 40문단·쪽 번호 보존, 60쪽 중 분리 호출 40회 | 노재원 |
+| 정종원 | 문장 기호 지원 | 。！？와 기존 .!?·줄바꿈 분리 | 송준서 |
+
+- 예상 시간: 1인당 구현·시험·연결·검토 약 1~2시간
+- 통합 확인: 김동준·김혜중이 수정한 같은 함수의 두 변경 구간 모두 보존
+- 자료 출처: 기준 Git 커밋 및 노트북에서 구성한 시험용 합성 문자열
+- 개인정보: 실제 개인정보 미사용
+- 원자료 보관: `BASE_TEXT`에 수정 전 코드 별도 보관
+- 시험 구성: 반복 문자로 길이 설정, 사진·빈 입력·짧은 의견 구분
+- 원문 대조: 출력 목록과 원문 결합 결과 비교
+- 시각화: 별도 그래프 불필요
+
+## STEP 2. 작업 자료와 처리·수정 기준 준비
+
+| 자료·코드 | 형식·자료형 | 구성·처리 기준 |
+| --- | --- | --- |
+| 기준 프로젝트 | Python 소스 문자열 | Git 커밋 cf389690fd36f457d7ddeab4ae2b323029d348aa. 수정 전 원문은 BASE_TEXT에 별도 보관 |
+| 문단 분리 입력 | str | 같은 두 문장에 LF·CRLF·CR을 적용. 기존 문단 8자 필터·최대 40개 기준 유지 |
+| 긴 글 | str | 반복 문자 1000·721·420자, 교차 시험 1081자. 40개 문단 제한 이내에서 전체 글자 보존 비교 |
+| 채팅 | list[str] → list[dict] | text는 글, when은 시각. 시험용 시각 누락은 빈 문자열. 공백·안내 제외, 짧은 텍스트 보존 |
+| 페이지 | list[str] | 한 쪽에 한 문단인 60쪽과 빈 첫 쪽. 문단·원래 쪽 번호·실제 분리 호출 수 비교 |
+| 문장 분리 입력 | str → list[str] | 。！？와 .!? 뒤 공백 및 줄바꿈. 공백 없는 연속 문장 분리는 범위 밖 |
+
+- 자료 준비·검증일: 2026-11-19
+- 자료 구분: 구성 조건을 명시한 시험용 합성 입력
+- 중복 처리: 이번 개선 범위에 포함하지 않음
+- 누락·추가 확인: 예상 목록 또는 문자열 전체 일치로 비교
+
+**기존 코드·문제 발생 조건·수정 기준**
+
+| 작업 | 작업 성격 | 기존 결과·발생 조건 | 수정 또는 유지 기준 |
+| --- | --- | --- | --- |
+| 줄바꿈 통일 | 입력 처리 오류 수정 | 단독 CR에서 두 문장이 같은 덩어리로 남음 | 세 줄바꿈 형식의 문단 목록 일치 |
+| 긴 문단 분할 | 길이 처리 기준 보완 | 마침표 없는 1000자 문장이 길이 제한을 초과 | 각 조각 420자 이하, 시험 원문 전체 보존 |
+| 짧은 채팅 | 자료 누락 오류 수정 | 4글자 미만 제외 조건으로 찬성·반대 삭제 | 빈 입력·안내는 제외하고 짧은 텍스트 보존 |
+| 반복 종료 | 기존 동작을 유지하는 구조 개선 | 60쪽을 처리하지만 결과는 이미 40문단 | 결과·쪽 번호 동일, 호출 40회로 감소 |
+| 문장 기호 | 처리 기준 보완 | 새 기호 뒤 공백에서 문장이 분리되지 않음 | 새 기호 추가, 기존 기호·줄바꿈 동작 보존 |
+
+## STEP 3. 개인별 AI 활용과 구현·수정
+
+- 이름별 구성: 목적·완료 기준 → AI 요청·반영 판단 → 기존 코드·시험 입력 → 수정·재실행 → 개인별 참여 기록
+- 프롬프트 표현: 담당 관점에 맞춰 말투와 길이를 다듬은 요청문
+- 기록 범위: 실제 학생별 대화 이력을 나타내는 자료는 아님
+</pre></section><section class="block is-code" id="cell-03"><header><span class="number">03</span><div><span class="kind">코드 셀</span><h2>공통 준비 · 실제 함수 로딩과 결과 출력</h2></div><button type="button" data-copy="03">본문 복사</button></header><pre id="body-03">from pathlib import Path
+import ast
+import re
+import subprocess
+import tempfile
+from types import SimpleNamespace
+
+BASE = &quot;cf389690fd36f457d7ddeab4ae2b323029d348aa&quot;
+WORK = Path(tempfile.mkdtemp(prefix=&quot;minime-simple-&quot;))
+REPO = WORK / &quot;source&quot;
+subprocess.run([&quot;git&quot;, &quot;clone&quot;, &quot;--quiet&quot;, &quot;https://github.com/jkzk1397/minime.git&quot;, str(REPO)], check=True)
+subprocess.run([&quot;git&quot;, &quot;checkout&quot;, &quot;--quiet&quot;, &quot;--detach&quot;, BASE], cwd=REPO, check=True)
+FILES = [&quot;app/persona.py&quot;, &quot;app/sources.py&quot;, &quot;app/ko.py&quot;]
+BASE_TEXT = {path: (REPO / path).read_text(encoding=&quot;utf-8&quot;) for path in FILES}
+CHANGES = {}
+
+def function_source(text, name):
+    node = next(n for n in ast.parse(text).body
+                if isinstance(n, ast.FunctionDef) and n.name == name)
+    return &quot;\n&quot;.join(text.splitlines()[node.lineno - 1:node.end_lineno])
+
+def load_functions(texts):
+    # 실제 소스에서 네 함수만 추출해 실행한다. 웹 서버·AI 연결은 필요 없다.
+    scope = {&quot;re&quot;: re, &quot;MAX_CHAT_LINES&quot;: 400}
+    exec(function_source(texts[&quot;app/ko.py&quot;], &quot;sentences&quot;), scope)
+    scope[&quot;ko&quot;] = SimpleNamespace(sentences=scope[&quot;sentences&quot;])
+    for path, name in [(&quot;app/persona.py&quot;, &quot;split_report&quot;),
+                       (&quot;app/persona.py&quot;, &quot;split_pages&quot;), (&quot;app/sources.py&quot;, &quot;clean_lines&quot;)]:
+        exec(function_source(texts[path], name), scope)
+    return scope
+
+def changed(texts, change):
+    path, old, new = change
+    result = dict(texts)
+    if result[path].count(old) != 1:
+        raise ValueError(&quot;수정 대상 코드가 정확히 한 곳이어야 합니다.&quot;)
+    result[path] = result[path].replace(old, new, 1)
+    return result
+
+RESULTS = []
+def check(label, expected, actual):
+    ok = expected == actual
+    RESULTS.append(ok)
+    print(label)
+    # 긴 원문 대신 길이와 앞부분을 출력하고 판정은 전체 값으로 한다.
+    def display(value):
+        return f&quot;문자열 {len(value)}자: {value[:30]}…&quot; if isinstance(value, str) and len(value) &gt; 100 else value
+    print(&quot;  예상:&quot;, display(expected))
+    print(&quot;  실제:&quot;, display(actual))
+    print(&quot;  판정:&quot;, &quot;통과&quot; if ok else &quot;개선 필요&quot;)
+
+print(&quot;기준 코드 준비 완료. 파일 업로드·AI API 키·라이브러리 설치 없이 시험합니다.&quot;)
+</pre></section><section class="block" id="cell-04"><header><span class="number">04</span><div><span class="kind">텍스트 셀</span><h2>김동준 · 목적과 AI 활용</h2></div><button type="button" data-copy="04">본문 복사</button></header><pre id="body-04">## 김동준 · 줄바꿈 형식 통일
+
+**담당 작업·완료 기준**
+
+- LF·CRLF·CR 입력에서 같은 두 문단을 반환한다.
+
+**코드 위치**
+
+- `app/persona.py`의 `split_report`. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.
+
+**AI 요청 · 담당별 요청문**
+
+&gt; MINIME 문서 입력에서 줄바꿈 때문에 결과가 달라지는 걸 고치고 싶어.
+&gt; 대상은 app/persona.py의 Python split_report이고, 다음 셀에서 출력하는 기존 함수 원문을 봐줘. 지금은 CRLF만 LF로 바꿔서 단독 CR로 붙인 두 문장이 따로 나뉘지 않아.
+&gt; 시험용 입력은 &#x27;첫 번째 시험용 문단입니다.&#x27;와 &#x27;두 번째 시험용 문단입니다.&#x27;를 LF·CRLF·CR로 이어 붙인 세 가지야. Colab에서 셋 다 같은 두 문단이 나오게 해 줘. 문단 내용과 순서는 그대로 남겨줘.
+&gt; 김혜중이 같은 함수의 긴 글 분할 구간을 고치니까 나는 줄바꿈 정규화 구간만 바꾸고 싶어. 송준서의 split_pages에서 계속 호출할 수 있게 함수 이름과 문자열 목록 반환 방식도 유지해 줘.
+
+**입력·환경·연결 조건**
+
+- 언어·도구: Python, Google Colab
+- 제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문
+- 연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지
+
+**AI 응답·채택 이유**
+
+- CRLF를 LF로 바꾼 뒤 남은 CR을 LF로 바꾸면 두 글자 줄바꿈이 중복 변환되지 않는다.
+- 기존 문단 분리 단계 앞에 적용한다.
+
+**처리·수정 기준**
+
+- CRLF를 먼저 LF로 바꾸고 남은 CR을 LF로 바꾼다.
+- 문단 순서와 내용은 유지한다.
+</pre></section><section class="block is-code" id="cell-05"><header><span class="number">05</span><div><span class="kind">코드 셀</span><h2>김동준 · 실제 기존 코드와 입력 시험</h2></div><button type="button" data-copy="05">본문 복사</button></header><pre id="body-05"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+TEST_1 = &#x27;first = &quot;첫 번째 시험용 문단입니다.&quot;\nsecond = &quot;두 번째 시험용 문단입니다.&quot;\ninputs = [first + sep + second for sep in [&quot;\\n&quot;, &quot;\\r\\n&quot;, &quot;\\r&quot;]]\nfor label, text in zip([&quot;LF&quot;, &quot;CRLF&quot;, &quot;CR&quot;], inputs):\n    check(label, [first, second], split_report(text))\n&#x27;
+before_scope_1 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_1, dict(before_scope_1, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block is-code" id="cell-06"><header><span class="number">06</span><div><span class="kind">코드 셀</span><h2>김동준 · 수정 코드와 동일 입력 검증</h2></div><button type="button" data-copy="06">본문 복사</button></header><pre id="body-06">OLD_1 = &#x27;text = text.replace(&quot;\\r\\n&quot;, &quot;\\n&quot;).strip()&#x27;
+NEW_1 = &#x27;text = text.replace(&quot;\\r\\n&quot;, &quot;\\n&quot;).replace(&quot;\\r&quot;, &quot;\\n&quot;).strip()&#x27;
+CHANGES[1] = (&#x27;app/persona.py&#x27;, OLD_1, NEW_1)
+PERSONAL_1 = changed(BASE_TEXT, CHANGES[1])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_1[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+after_scope_1 = load_functions(PERSONAL_1)
+RESULTS.clear()
+exec(TEST_1, dict(after_scope_1, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block" id="cell-07"><header><span class="number">07</span><div><span class="kind">텍스트 셀</span><h2>김동준 · 결과 해석</h2></div><button type="button" data-copy="07">본문 복사</button></header><pre id="body-07">### 김동준 · 개인별 참여 기록
+
+| 기록 항목 | 내용 |
+| --- | --- |
+| 담당 작업 | 줄바꿈 통일. 완료 기준: LF·CRLF·CR 입력에서 같은 두 문단을 반환한다. |
+| AI 활용 | 앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다. |
+| 개인 결과물 | `app/persona.py · split_report`. `CHANGES[1]`, `PERSONAL_1`, `TEST_1`에 변경과 입력을 보관한다. 확인 결과: LF·CRLF·CR 모두 같은 두 문단. |
+| 교차 검증 | 김혜중의 1081자 입력에서 원문 보존 및 각 조각 420자 이하 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다. |
+| 최종 시험 | 통합 파일 재로딩 후 LF·CRLF·CR로 같은 문장 입력 → 같은 두 문단 예상·실제 일치. STEP 5 실행 출력 참조. |
+
+**전후 비교와 분석**  
+세 줄바꿈 입력의 기대값은 같은 두 문단이다. 기존 단독 CR은 문단을 분리하지 못하지만 수정 후에는 동일 결과가 된다.
+
+- 검증 방법: 코드·원자료·출력 비교
+- 실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정
+- 수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조
+</pre></section><section class="block" id="cell-08"><header><span class="number">08</span><div><span class="kind">텍스트 셀</span><h2>김혜중 · 목적과 AI 활용</h2></div><button type="button" data-copy="08">본문 복사</button></header><pre id="body-08">## 김혜중 · 긴 문단의 길이 제한
+
+**담당 작업·완료 기준**
+
+- 시험 범위의 긴 문단을 조각마다 420자 이하로 나누고 원문 글자를 모두 보존한다.
+
+**코드 위치**
+
+- `app/persona.py`의 `split_report`. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.
+
+**AI 요청 · 담당별 요청문**
+
+&gt; Python·Google Colab에서 MINIME의 긴 문단 분할을 개선하려고 합니다. app/persona.py의 split_report가 대상이며, 관련 기존 함수 원문은 다음 코드 셀에 있습니다.
+&gt;
+&gt; 현재 증상은 마침표 없는 1000자 문자열이 하나의 긴 문장으로 남아 길이 제한을 만족하지 못하는 것입니다. 시험용 자료는 &#x27;가&#x27;를 1000회·721회·420회 반복한 문자열로 구성하겠습니다.
+&gt;
+&gt; 다음 조건을 충족하는 수정 코드를 제안해 주세요.
+&gt; 1. 결과 조각은 각각 420자 이하여야 합니다.
+&gt; 2. 조각을 순서대로 이어 붙이면 시험 원문 전체와 정확히 같아야 합니다.
+&gt; 3. 끝에 1~7자가 남아도 기존 8자 필터 때문에 삭제되지 않아야 합니다.
+&gt; 4. 420자 정상 입력과 기존 문단 최대 40개 기준은 유지해 주세요. 전체 보존 시험은 이 개수 제한 이내에서 진행합니다.
+&gt;
+&gt; 360자 단위로 나누고 짧은 끝부분을 앞 조각에 합치는 방법이라면 1000자는 360·360·280자, 721자는 360·361자로 나오는지도 확인해 주세요.
+&gt; 김동준은 같은 함수의 줄바꿈 구간을 수정하므로 그 부분을 덮어쓰지 않도록 변경 구간을 분리해 주세요. 송준서의 split_pages와 연결되는 함수 이름·호출 방식·반환 목록 형식도 유지해 주세요.
+
+**입력·환경·연결 조건**
+
+- 언어·도구: Python, Google Colab
+- 제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문
+- 연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지
+
+**AI 응답·채택 이유**
+
+- 문장 단위 분할을 고정 길이 360자 분할로 바꾼다.
+- 마지막 조각이 8자보다 짧으면 앞 조각에 붙인다.
+- 가장 긴 조각도 367자이므로 420자 한도를 지키며 끝부분 누락도 방지한다.
+
+**처리·수정 기준**
+
+- 360자 단위 분할 후 8자 미만 꼬리는 앞 조각에 합친다.
+- 전체 보존은 기존 40문단 상한 이내의 시험 입력에서 비교한다.
+</pre></section><section class="block is-code" id="cell-09"><header><span class="number">09</span><div><span class="kind">코드 셀</span><h2>김혜중 · 실제 기존 코드와 입력 시험</h2></div><button type="button" data-copy="09">본문 복사</button></header><pre id="body-09"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+TEST_2 = &#x27;for size in [1000, 721, 420]:\n    text = &quot;가&quot; * size\n    result = split_report(text)\n    print(&quot;입력 길이:&quot;, size, &quot;출력 조각 길이:&quot;, [len(x) for x in result])\n    check(f&quot;{size}자 길이 제한&quot;, True, all(len(x) &lt;= 420 for x in result))\n    check(f&quot;{size}자 원문 보존&quot;, text, &quot;&quot;.join(result))\n&#x27;
+before_scope_2 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_2, dict(before_scope_2, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block is-code" id="cell-10"><header><span class="number">10</span><div><span class="kind">코드 셀</span><h2>김혜중 · 수정 코드와 동일 입력 검증</h2></div><button type="button" data-copy="10">본문 복사</button></header><pre id="body-10">OLD_2 = &#x27;        buf = &quot;&quot;\n        for s in ko.sentences(para):\n            if len(buf) + len(s) &gt; 360 and buf:\n                out.append(buf.strip())\n                buf = &quot;&quot;\n            buf += &quot; &quot; + s\n        if buf.strip():\n            out.append(buf.strip())&#x27;
+NEW_2 = &#x27;        # 문장 부호가 없어도 길이를 제한하고 모든 글자를 보존한다.\n        pieces = [para[i:i + 360] for i in range(0, len(para), 360)]\n        # 8자 미만 꼬리가 마지막 필터에서 사라지지 않게 앞 조각에 붙인다.\n        if len(pieces) &gt; 1 and len(pieces[-1]) &lt; 8:\n            tail = pieces.pop()\n            pieces[-1] += tail\n        out.extend(pieces)&#x27;
+CHANGES[2] = (&#x27;app/persona.py&#x27;, OLD_2, NEW_2)
+PERSONAL_2 = changed(BASE_TEXT, CHANGES[2])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_2[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+after_scope_2 = load_functions(PERSONAL_2)
+RESULTS.clear()
+exec(TEST_2, dict(after_scope_2, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block" id="cell-11"><header><span class="number">11</span><div><span class="kind">텍스트 셀</span><h2>김혜중 · 결과 해석</h2></div><button type="button" data-copy="11">본문 복사</button></header><pre id="body-11">### 김혜중 · 개인별 참여 기록
+
+| 기록 항목 | 내용 |
+| --- | --- |
+| 담당 작업 | 긴 문단 분할. 완료 기준: 시험 범위의 긴 문단을 조각마다 420자 이하로 나누고 원문 글자를 모두 보존한다. |
+| AI 활용 | 앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다. |
+| 개인 결과물 | `app/persona.py · split_report`. `CHANGES[2]`, `PERSONAL_2`, `TEST_2`에 변경과 입력을 보관한다. 확인 결과: 1000자 → 360·360·280자, 721자 → 360·361자, 원문 보존. |
+| 교차 검증 | 노재원의 네·동의 보존, 빈 글·파일 제외 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다. |
+| 최종 시험 | 통합 파일 재로딩 후 1000·721·420자 입력 → 길이 제한·원문 보존 예상·실제 일치. STEP 5 실행 출력 참조. |
+
+**전후 비교와 분석**  
+기존 1000자 문장은 1000자로 남아 길이 검사를 실패한다. 수정 후 360·360·280자로 나뉜다. 721자는 360·361자로 끝 1자도 보존한다. 420자 정상 입력은 그대로다.
+
+- 검증 방법: 코드·원자료·출력 비교
+- 실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정
+- 수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조
+</pre></section><section class="block" id="cell-12"><header><span class="number">12</span><div><span class="kind">텍스트 셀</span><h2>노재원 · 목적과 AI 활용</h2></div><button type="button" data-copy="12">본문 복사</button></header><pre id="body-12">## 노재원 · 짧은 채팅 보존
+
+**담당 작업·완료 기준**
+
+- 찬성·반대·한 글자 의견을 보존하고 빈 입력·안내는 제외한다.
+
+**코드 위치**
+
+- `app/sources.py`의 `clean_lines`. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.
+
+**AI 요청 · 담당별 요청문**
+
+&gt; 찬성이나 반대 같은 짧은 채팅을 놓치지 않게 바꾸고 싶어요. 다음 셀의 app/sources.py clean_lines 기존 Python 코드를 확인해 주실래요? 지금은 4글자 미만이면 제외돼서 두 의견도 없어집니다.
+&gt; Colab에서 [&#x27;찬성&#x27;, &#x27;반대&#x27;, &#x27; &#x27;, &#x27;사진&#x27;, &#x27;이모티콘&#x27;, &#x27;https://example.com&#x27;, &#x27;출시 일정에 찬성합니다.&#x27;]를 넣어 찬성·반대·마지막 문장만 남는지 보고 싶어요. 빈 입력과 기존 안내 패턴은 계속 제외하고 한 글자 내용도 보존해 주세요.
+&gt; 다른 담당의 문서 함수와 별개로 이 제외 조건만 수정하고, 앱 채팅 가져오기에서 계속 쓸 수 있도록 text·when 객체 목록과 최대 400개 반환 기준은 유지해 주세요.
+
+**입력·환경·연결 조건**
+
+- 언어·도구: Python, Google Colab
+- 제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문
+- 연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지
+
+**AI 응답·채택 이유**
+
+- 문자 수 4 미만 조건을 빈 문자열 조건으로 바꾼다.
+- 기존 제외 패턴은 유지한다.
+- 한 글자도 보존하는 정책이므로 이번 기준은 의미 자동 판별이 아니라 짧은 내용의 일괄 보존이다.
+
+**처리·수정 기준**
+
+- 빈 텍스트와 기존 안내 패턴은 제외한다.
+- 의미를 AI로 분류하지 않고 짧은 비어 있지 않은 텍스트를 보존한다.
+- text·when 구조와 최대 400개 반환은 유지한다.
+</pre></section><section class="block is-code" id="cell-13"><header><span class="number">13</span><div><span class="kind">코드 셀</span><h2>노재원 · 실제 기존 코드와 입력 시험</h2></div><button type="button" data-copy="13">본문 복사</button></header><pre id="body-13"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/sources.py&#x27;], &#x27;clean_lines&#x27;))
+TEST_3 = &#x27;text = [&quot;찬성&quot;, &quot;반대&quot;, &quot; &quot;, &quot;사진&quot;, &quot;이모티콘&quot;, &quot;https://example.com&quot;, &quot;출시 일정에 찬성합니다.&quot;]\nprint(&quot;시험 입력:&quot;, text)\ncheck(&quot;짧은 의견 보존과 안내 제외&quot;, [&quot;찬성&quot;, &quot;반대&quot;, &quot;출시 일정에 찬성합니다.&quot;],\n      [row[&quot;text&quot;] for row in clean_lines(text)])\n&#x27;
+before_scope_3 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_3, dict(before_scope_3, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block is-code" id="cell-14"><header><span class="number">14</span><div><span class="kind">코드 셀</span><h2>노재원 · 수정 코드와 동일 입력 검증</h2></div><button type="button" data-copy="14">본문 복사</button></header><pre id="body-14">OLD_3 = &#x27;if len(t) &lt; 4 or skip.match(t):&#x27;
+NEW_3 = &#x27;if not t or skip.match(t):&#x27;
+CHANGES[3] = (&#x27;app/sources.py&#x27;, OLD_3, NEW_3)
+PERSONAL_3 = changed(BASE_TEXT, CHANGES[3])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_3[&#x27;app/sources.py&#x27;], &#x27;clean_lines&#x27;))
+after_scope_3 = load_functions(PERSONAL_3)
+RESULTS.clear()
+exec(TEST_3, dict(after_scope_3, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block" id="cell-15"><header><span class="number">15</span><div><span class="kind">텍스트 셀</span><h2>노재원 · 결과 해석</h2></div><button type="button" data-copy="15">본문 복사</button></header><pre id="body-15">### 노재원 · 개인별 참여 기록
+
+| 기록 항목 | 내용 |
+| --- | --- |
+| 담당 작업 | 짧은 채팅 보존. 완료 기준: 찬성·반대·한 글자 의견을 보존하고 빈 입력·안내는 제외한다. |
+| AI 활용 | 앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다. |
+| 개인 결과물 | `app/sources.py · clean_lines`. `CHANGES[3]`, `PERSONAL_3`, `TEST_3`에 변경과 입력을 보관한다. 확인 결과: 찬성·반대·긴 문장 보존, 공백·안내 제외. |
+| 교차 검증 | 송준서의 빈 첫 쪽 뒤 출처 [2] 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다. |
+| 최종 시험 | 통합 파일 재로딩 후 의견·공백·안내 혼합 입력 → 찬성·반대·긴 문장 예상·실제 일치. STEP 5 실행 출력 참조. |
+
+**전후 비교와 분석**  
+기존 결과는 긴 문장만 남는다. 수정 후 찬성·반대·긴 문장이 남고 빈 입력·사진·이모티콘·링크는 제외된다. 짧은 의견의 의미를 추론하지 않고 비어 있지 않은 텍스트를 보존하는 기준이다.
+
+- 검증 방법: 코드·원자료·출력 비교
+- 실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정
+- 수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조
+</pre></section><section class="block" id="cell-16"><header><span class="number">16</span><div><span class="kind">텍스트 셀</span><h2>송준서 · 목적과 AI 활용</h2></div><button type="button" data-copy="16">본문 복사</button></header><pre id="body-16">## 송준서 · 문단 제한 후 불필요한 처리 종료
+
+**담당 작업·완료 기준**
+
+- 결과 40문단과 원래 쪽 번호를 유지하고 60쪽 입력의 분리 호출을 40회로 줄인다.
+
+**코드 위치**
+
+- `app/persona.py`의 `split_pages`. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.
+
+**AI 요청 · 담당별 요청문**
+
+&gt; 작업 목적: MINIME의 불필요한 페이지 분리 줄이기.
+&gt; 언어·도구: Python, Google Colab.
+&gt; 관련 코드: app/persona.py의 split_pages. 다음 셀의 기존 함수 원문 사용.
+&gt; 현재 증상: 안쪽 break만 있어 40문단 이후에도 다음 페이지의 split_report 호출이 이어짐.
+&gt; 시험 입력: 한 쪽에 한 문단인 시험용 페이지 60개.
+&gt; 기대 결과: 기존처럼 40문단·쪽 번호 1~40 반환, 실제 분리 호출은 40회.
+&gt; 수정 조건: 바깥 반복에서 먼저 종료 여부 검사. 한 페이지 안의 40개 제한도 유지.
+&gt; 담당 연결: 김동준·김혜중이 수정한 split_report를 그대로 호출. 반환 튜플과 쪽 번호 대응 유지. Colab에서는 기존 함수를 감싼 계수 함수로 호출 수를 확인해 주세요.
+
+**입력·환경·연결 조건**
+
+- 언어·도구: Python, Google Colab
+- 제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문
+- 연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지
+
+**AI 응답·채택 이유**
+
+- 페이지 반복문 안에서 문단 수를 먼저 검사한다.
+- 40개면 다음 페이지를 분리하지 않고 종료한다.
+- 기존 안쪽 제한도 두어 한 페이지에 문단이 많아도 40개만 보존한다.
+
+**처리·수정 기준**
+
+- 페이지 분리 전에 문단 수를 검사한다.
+- 한 페이지 안에서도 최대 40개만 추가한다.
+- 시험용 계수 함수로 실제 호출 수를 측정한다.
+</pre></section><section class="block is-code" id="cell-17"><header><span class="number">17</span><div><span class="kind">코드 셀</span><h2>송준서 · 실제 기존 코드와 입력 시험</h2></div><button type="button" data-copy="17">본문 복사</button></header><pre id="body-17"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/persona.py&#x27;], &#x27;split_pages&#x27;))
+TEST_4 = &#x27;pages = [&quot;첫 번째 시험용 문단입니다.&quot;] * 60\noriginal_split = split_report\ncalls = []\ndef counted(text):\n    calls.append(text)\n    return original_split(text)\nsplit_pages.__globals__[&quot;split_report&quot;] = counted\ntry:\n    paragraphs, numbers = split_pages(pages)\nfinally:\n    split_pages.__globals__[&quot;split_report&quot;] = original_split\ncheck(&quot;문단 40개 유지&quot;, 40, len(paragraphs))\ncheck(&quot;원래 쪽 번호 유지&quot;, list(range(1, 41)), numbers)\ncheck(&quot;처리한 페이지 수&quot;, 40, len(calls))\n&#x27;
+before_scope_4 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_4, dict(before_scope_4, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block is-code" id="cell-18"><header><span class="number">18</span><div><span class="kind">코드 셀</span><h2>송준서 · 수정 코드와 동일 입력 검증</h2></div><button type="button" data-copy="18">본문 복사</button></header><pre id="body-18">OLD_4 = &#x27;    for n, text in enumerate(pages, 1):\n        for para in split_report(text or &quot;&quot;):&#x27;
+NEW_4 = &#x27;    for n, text in enumerate(pages, 1):\n        if len(paras) &gt;= 40:\n            break\n        for para in split_report(text or &quot;&quot;):&#x27;
+CHANGES[4] = (&#x27;app/persona.py&#x27;, OLD_4, NEW_4)
+PERSONAL_4 = changed(BASE_TEXT, CHANGES[4])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_4[&#x27;app/persona.py&#x27;], &#x27;split_pages&#x27;))
+after_scope_4 = load_functions(PERSONAL_4)
+RESULTS.clear()
+exec(TEST_4, dict(after_scope_4, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block" id="cell-19"><header><span class="number">19</span><div><span class="kind">텍스트 셀</span><h2>송준서 · 결과 해석</h2></div><button type="button" data-copy="19">본문 복사</button></header><pre id="body-19">### 송준서 · 개인별 참여 기록
+
+| 기록 항목 | 내용 |
+| --- | --- |
+| 담당 작업 | 페이지 처리 조기 종료. 완료 기준: 결과 40문단과 원래 쪽 번호를 유지하고 60쪽 입력의 분리 호출을 40회로 줄인다. |
+| AI 활용 | 앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다. |
+| 개인 결과물 | `app/persona.py · split_pages`. `CHANGES[4]`, `PERSONAL_4`, `TEST_4`에 변경과 입력을 보관한다. 확인 결과: 문단 40개·쪽 번호 1~40 유지, 호출 60→40회. |
+| 교차 검증 | 정종원의 새 기호·기존 기호 혼용 입력이 세 문장인지 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다. |
+| 최종 시험 | 통합 파일 재로딩 후 60쪽 입력 → 40문단·번호 1~40·호출 40회 예상·실제 일치. STEP 5 실행 출력 참조. |
+
+**전후 비교와 분석**  
+기존과 수정 후 모두 문단 40개와 쪽 번호 1~40은 같다. 분리 함수 호출 수는 60회에서 40회로 줄어든다. 시험용 계수 함수는 실제 split_report를 그대로 호출하고 시험 후 복원한다.
+
+- 검증 방법: 코드·원자료·출력 비교
+- 실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정
+- 수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조
+</pre></section><section class="block" id="cell-20"><header><span class="number">20</span><div><span class="kind">텍스트 셀</span><h2>정종원 · 목적과 AI 활용</h2></div><button type="button" data-copy="20">본문 복사</button></header><pre id="body-20">## 정종원 · 문장 구분 기호 보완
+
+**담당 작업·완료 기준**
+
+- 새 기호 。！？와 기존 .!? 뒤 공백 및 줄바꿈을 문장 경계로 처리한다.
+
+**코드 위치**
+
+- `app/ko.py`의 `sentences`. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.
+
+**AI 요청 · 담당별 요청문**
+
+&gt; MINIME 문장을 나누는 기호를 조금 늘려보자. Python으로 작성된 app/ko.py의 sentences가 대상이고, 다음 셀에 실제 기존 코드를 넣었어. 지금 정규식은 .!? 뒤 공백과 줄바꿈만 나눠서 &#x27;첫 문장。 다음 문장。&#x27;은 한 덩어리로 남아.
+&gt; Google Colab에서 같은 두 문장을 。, ！, ？로 연결한 시험용 입력이 각각 두 문장으로 나오게 해 줘. 기존 .!?와 줄바꿈도 계속 처리하고 기호 자체는 지우지 말아줘. 공백 없는 연속 문장까지 범위를 넓히지는 말자.
+&gt; 다른 담당이 사용하는 문서 처리와 호환되게 ko.sentences의 이름과 목록 반환 형식은 유지해 줘. 특히 김혜중의 긴 문단 분할은 이 함수를 고치지 않아도 독립적으로 시험할 수 있어야 해.
+
+**입력·환경·연결 조건**
+
+- 언어·도구: Python, Google Colab
+- 제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문
+- 연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지
+
+**AI 응답·채택 이유**
+
+- 정규식의 문장 끝 기호 집합에 。！？를 추가한다.
+- 기호 뒤 공백 조건은 유지해 지원 범위를 분명히 한다.
+- 공백 없는 연속 문장 분리는 이번 범위에 포함하지 않는다.
+
+**처리·수정 기준**
+
+- 기호 뒤 공백과 줄바꿈을 경계로 쓴다.
+- 원문 기호는 보존하고 빈 문장은 제외한다.
+</pre></section><section class="block is-code" id="cell-21"><header><span class="number">21</span><div><span class="kind">코드 셀</span><h2>정종원 · 실제 기존 코드와 입력 시험</h2></div><button type="button" data-copy="21">본문 복사</button></header><pre id="body-21"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/ko.py&#x27;], &#x27;sentences&#x27;))
+TEST_5 = &#x27;for separator in [&quot;。&quot;, &quot;！&quot;, &quot;？&quot;, &quot;.&quot;, &quot;!&quot;, &quot;?&quot;]:\n    text = &quot;첫 문장&quot; + separator + &quot; 다음 문장&quot; + separator\n    check(&quot;기호 &quot; + separator, [&quot;첫 문장&quot; + separator, &quot;다음 문장&quot; + separator], sentences(text))\ncheck(&quot;줄바꿈&quot;, [&quot;첫 문장&quot;, &quot;다음 문장&quot;], sentences(&quot;첫 문장\\n다음 문장&quot;))\n&#x27;
+before_scope_5 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_5, dict(before_scope_5, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block is-code" id="cell-22"><header><span class="number">22</span><div><span class="kind">코드 셀</span><h2>정종원 · 수정 코드와 동일 입력 검증</h2></div><button type="button" data-copy="22">본문 복사</button></header><pre id="body-22">OLD_5 = &#x27;(?&lt;=[.!?])\\s+|\\n+&#x27;
+NEW_5 = &#x27;(?&lt;=[.!?。！？])\\s+|\\n+&#x27;
+CHANGES[5] = (&#x27;app/ko.py&#x27;, OLD_5, NEW_5)
+PERSONAL_5 = changed(BASE_TEXT, CHANGES[5])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_5[&#x27;app/ko.py&#x27;], &#x27;sentences&#x27;))
+after_scope_5 = load_functions(PERSONAL_5)
+RESULTS.clear()
+exec(TEST_5, dict(after_scope_5, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</pre></section><section class="block" id="cell-23"><header><span class="number">23</span><div><span class="kind">텍스트 셀</span><h2>정종원 · 결과 해석</h2></div><button type="button" data-copy="23">본문 복사</button></header><pre id="body-23">### 정종원 · 개인별 참여 기록
+
+| 기록 항목 | 내용 |
+| --- | --- |
+| 담당 작업 | 문장 기호 지원. 완료 기준: 새 기호 。！？와 기존 .!? 뒤 공백 및 줄바꿈을 문장 경계로 처리한다. |
+| AI 활용 | 앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다. |
+| 개인 결과물 | `app/ko.py · sentences`. `CHANGES[5]`, `PERSONAL_5`, `TEST_5`에 변경과 입력을 보관한다. 확인 결과: 새 기호 3개와 기존 기호·줄바꿈 모두 분리. |
+| 교차 검증 | 김동준의 CR·CRLF 혼합 입력이 세 문단인지 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다. |
+| 최종 시험 | 통합 파일 재로딩 후 기호별 입력 → 두 문장, 줄바꿈 입력 → 두 문장 예상·실제 일치. STEP 5 실행 출력 참조. |
+
+**전후 비교와 분석**  
+기존 .!?와 줄바꿈은 유지되고 。！？ 뒤 공백도 문장 분리로 처리된다. 공백 없는 연속 문장의 분리까지 보장하는 것은 아니다.
+
+- 검증 방법: 코드·원자료·출력 비교
+- 실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정
+- 수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조
+</pre></section><section class="block" id="cell-24"><header><span class="number">24</span><div><span class="kind">텍스트 셀</span><h2>교차 검증 · 추가 입력과 기록표</h2></div><button type="button" data-copy="24">본문 복사</button></header><pre id="body-24">## STEP 4. 조원 간 교차 검증
+
+- 검증 방법: 짧은 추가 입력 실행 후 예상·실제 출력 대조
+- 검증 대상: 각 담당의 개인 수정본
+- 실행 근거: 다음 셀의 검증자 이름별 출력
+- 기록 범위: 자동 검증 결과이며 사람의 직접 수행 여부와 구분
+
+| 검증자 → 담당 | 다른 시험 입력 | 예상 결과 | 실제 결과·판정 및 근거 |
+| --- | --- | --- | --- |
+| 김동준 → 김혜중 | 1081자 반복 글 | 끝 1자 보존, 최대 420자 | 예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조 |
+| 김혜중 → 노재원 | 네·동의·빈 글·파일 | 네·동의만 보존 | 예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조 |
+| 노재원 → 송준서 | 빈 첫 쪽과 둘째 쪽 | 쪽 번호 [2] | 예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조 |
+| 송준서 → 정종원 | 새 기호와 기존 기호 혼용 | 세 문장 | 예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조 |
+| 정종원 → 김동준 | CR·CRLF 혼합 글 | 세 문단 | 예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조 |
+
+- 실제 결과·판정: 다음 셀의 이름별 출력에 표시
+- 실패 시 조치: 구현 수정 → 개인 시험 → 교차 시험 → 통합 시험 재실행
+</pre></section><section class="block is-code" id="cell-25"><header><span class="number">25</span><div><span class="kind">코드 셀</span><h2>교차 검증 · 추가 문장 실행</h2></div><button type="button" data-copy="25">본문 복사</button></header><pre id="body-25">print(&quot;\n김동준 → 김혜중&quot;)
+RESULTS.clear()
+exec(&#x27;text = &quot;나&quot; * 1081\nparts = split_report(text)\ncheck(&quot;끝 1자까지 보존&quot;, text, &quot;&quot;.join(parts))\ncheck(&quot;모든 조각 420자 이하&quot;, True, all(len(p) &lt;= 420 for p in parts))&#x27;, dict(after_scope_2, check=check))
+assert all(RESULTS)
+print(&quot;\n김혜중 → 노재원&quot;)
+RESULTS.clear()
+exec(&#x27;check(&quot;한 글자·동의 보존&quot;, [&quot;네&quot;, &quot;동의&quot;], [x[&quot;text&quot;] for x in clean_lines([&quot;네&quot;, &quot;동의&quot;, &quot;&quot;, &quot;파일&quot;])])&#x27;, dict(after_scope_3, check=check))
+assert all(RESULTS)
+print(&quot;\n노재원 → 송준서&quot;)
+RESULTS.clear()
+exec(&#x27;paragraphs, pages = split_pages([&quot;&quot;, &quot;두 번째 쪽의 시험용 문장입니다.&quot;])\ncheck(&quot;빈 첫 쪽의 번호 보존&quot;, [2], pages)&#x27;, dict(after_scope_4, check=check))
+assert all(RESULTS)
+print(&quot;\n송준서 → 정종원&quot;)
+RESULTS.clear()
+exec(&#x27;check(&quot;새 기호와 기존 기호 혼용&quot;, [&quot;확인。&quot;, &quot;질문?&quot;, &quot;완료!&quot;], sentences(&quot;확인。 질문? 완료!&quot;))&#x27;, dict(after_scope_5, check=check))
+assert all(RESULTS)
+print(&quot;\n정종원 → 김동준&quot;)
+RESULTS.clear()
+exec(&#x27;check(&quot;혼합 줄바꿈&quot;, [&quot;첫 번째 시험 문단입니다.&quot;, &quot;두 번째 시험 문단입니다.&quot;, &quot;세 번째 시험 문단입니다.&quot;],\n      split_report(&quot;첫 번째 시험 문단입니다.\\r두 번째 시험 문단입니다.\\r\\n세 번째 시험 문단입니다.&quot;))&#x27;, dict(after_scope_1, check=check))
+assert all(RESULTS)
+</pre></section><section class="block" id="cell-26"><header><span class="number">26</span><div><span class="kind">텍스트 셀</span><h2>프로젝트 통합과 최종 시험</h2></div><button type="button" data-copy="26">본문 복사</button></header><pre id="body-26">## STEP 5. 프로젝트 반영 및 최종 동작 확인
+
+- 반영 순서: 기준 코드에 담당별 변경 구간 적용 → 실제 파일 저장 → 파일 재로딩 → 시험
+- 통합 확인: 같은 `split_report`를 수정한 두 변경을 모두 반영
+
+| 담당자 | 시험 조건·입력 자료 | 예상 결과 | 실제 결과 | 판정 및 수정 내용 |
+| --- | --- | --- | --- | --- |
+| 김동준 | 줄바꿈 형식·혼합 변경 | 같은 문단 결과 | 같은 문단 결과 | 통과. 아래 통합 실행 셀에서 재확인 |
+| 김혜중 | 최대 길이 초과·짧은 꼬리 | 길이 제한·원문 보존 | 길이 제한·원문 보존 | 통과. 아래 통합 실행 셀에서 재확인 |
+| 노재원 | 짧은 의견·제외 대상 혼합 | 보존·제외 기준 충족 | 보존·제외 기준 충족 | 통과. 아래 통합 실행 셀에서 재확인 |
+| 송준서 | 자료 수 초과·빈 페이지 | 40개 제한·쪽 번호 보존·호출 절감 | 40개 제한·쪽 번호 보존·호출 절감 | 통과. 아래 통합 실행 셀에서 재확인 |
+| 정종원 | 새 기호·기존 기호 혼합 | 문장 구분과 기존 동작 보존 | 문장 구분과 기존 동작 보존 | 통과. 아래 통합 실행 셀에서 재확인 |
+
+**결합 시험 및 통합 범위**
+
+- 결합 입력: 빈 첫 쪽과 CR로 나눈 긴 문단 두 개
+- 호출 함수: `split_pages`
+- 확인 항목: 조각 길이 제한, 원문 보존, 원래 쪽 번호
+- 시험 범위: 내부 함수의 자료 처리 연결
+- 미포함 범위: 실제 PDF 추출 및 브라우저 클릭
+- 담당별 연결: `CHANGES`의 담당 번호에 해당하는 변경 구간·시험 입력 통합
+- 충돌 확인: 같은 함수의 두 수정 구간이 모두 유지되는지 결합 시험으로 확인
+- 확인 결과: 자동 시험 통과, 추가 수정 없음
+</pre></section><section class="block is-code" id="cell-27"><header><span class="number">27</span><div><span class="kind">코드 셀</span><h2>실제 파일 반영과 통합본 시험</h2></div><button type="button" data-copy="27">본문 복사</button></header><pre id="body-27">final_text = dict(BASE_TEXT)
+for owner in range(1, 6):
+    final_text = changed(final_text, CHANGES[owner])
+for path, text in final_text.items():
+    (REPO / path).write_text(text, encoding=&quot;utf-8&quot;)
+    print(&quot;반영 파일:&quot;, REPO / path)
+saved = {path: (REPO / path).read_text(encoding=&quot;utf-8&quot;) for path in FILES}
+integrated_scope = load_functions(saved)
+RESULTS.clear()
+for owner, source in enumerate([TEST_1, TEST_2, TEST_3, TEST_4, TEST_5], 1):
+    print(&quot;\n통합본 담당&quot;, owner)
+    exec(source, dict(integrated_scope, check=check))
+print(&quot;\n담당별 기본 시험 합계:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+assert all(RESULTS)
+paragraphs, numbers = integrated_scope[&quot;split_pages&quot;]([&quot;&quot;, &quot;가&quot; * 721 + &quot;\r&quot; + &quot;나&quot; * 1000])
+check(&quot;결합 시험 길이 제한&quot;, True, all(len(p) &lt;= 420 for p in paragraphs))
+check(&quot;결합 시험 원문 보존&quot;, &quot;가&quot; * 721 + &quot;나&quot; * 1000, &quot;&quot;.join(paragraphs))
+check(&quot;결합 시험 쪽 번호&quot;, [2] * len(paragraphs), numbers)
+assert all(RESULTS)
+print(&quot;최종 전체 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+print(&quot;최종 프로젝트 코드 위치:&quot;, REPO)
+</pre></section><section class="block" id="cell-28"><header><span class="number">28</span><div><span class="kind">텍스트 셀</span><h2>최종 결과·코드 위치·제출</h2></div><button type="button" data-copy="28">본문 복사</button></header><pre id="body-28">## 개선 결과
+
+- 개선 대상: 줄바꿈 입력, 긴 글 분할, 짧은 의견 보존, 반복 처리, 문장 기호 지원
+- 통합본 시험: 담당별 기본 시험 20개 + 결합 시험 3개
+- 교차 검증: 추가 조건 6개
+- 판정 근거: 실행 셀의 예상·실제·판정 출력
+
+## 최종 코드와 실행 방법
+
+- 기준 저장소: [MINIME](https://github.com/jkzk1397/minime), 커밋 `cf389690fd36f457d7ddeab4ae2b323029d348aa`.
+- 변경 함수: `app/persona.py`의 split_report·split_pages, `app/sources.py`의 clean_lines, `app/ko.py`의 sentences.
+- 수정 전 코드는 BASE_TEXT에, 개인 수정본은 PERSONAL_1~5에, 최종 코드는 REPO의 실제 파일에 있다. GitHub 원격 저장소에 자동 게시하지 않는다.
+- Colab에서 번호 순서대로 코드 셀을 실행한다. 입력 예시를 직접 바꿔 다시 실행할 수 있다. 변경 시 후속 개인 시험·교차 검증·최종 통합도 다시 실행한다.
+- 전체 웹앱은 이 저장소를 내려받아 Windows run.bat 또는 macOS·Linux run.sh로 실행한다. 이번 개선의 동작 근거는 Colab의 실제 함수 출력이다.
+- 외부 AI API 키·유료 서비스·시험 파일 업로드가 필요하지 않다. 최초 저장소 다운로드에 인터넷 연결이 필요하다.
+- 실행 출력이 남은 Colab을 저장하고 평가자에게 열람 권한을 부여한다. **최종 제출물은 Colab 공유 링크 1개다.**
+
+
+## 제출 전 확인 항목
+
+- 프로젝트 소개·선택한 방식·문제·기대 결과: STEP 1.
+- 역할 분담표·개인별 완료 기준, 자료·출처·처리 기준·원본 보관: 역할표와 STEP 2.
+- 구현·수정 코드·AI 요청과 반영 내용·전후 출력·개인별 참여 기록: STEP 3의 이름별 구역.
+- 교차 검증과 담당별 서로 다른 통합 시험: STEP 4~5의 기록표와 실행 출력.
+- 최종 코드 위치와 실행 방법: 위 안내와 REPO 경로 출력.
+- Colab 코드는 실행 결과가 표시된 상태로 저장한다. 노트북과 연결된 저장소의 열람 권한을 확인한다. 별도 보고서 대신 공유 링크 하나를 제출한다.
+</pre></section></div><div id="panel-preview" role="tabpanel" aria-labelledby="tab-preview" hidden><div class="preview-intro">28개 셀을 원래 순서대로 모은 미리보기입니다. 텍스트의 제목·목록·표·인용문을 Markdown으로 렌더링했습니다. Python 코드는 표시만 하며 실행 출력은 Colab에서 확인합니다.</div><article class="notebook-preview"><section class="preview-cell" aria-label="01번 텍스트 셀"><div class="preview-label">01 · 텍스트</div><h1>MINIME 12주차 · 입력 텍스트 처리 개선</h1>
+<p>4조 생성까스 · 김동준, 김혜중, 노재원, 송준서, 정종원</p>
+<h2>STEP 1. 해결할 문제와 기대 결과 확정</h2>
+<p><strong>1. 프로젝트의 목적과 현재 구현 상태</strong></p>
+<ul>
+<li>목적: 회의 불참자의 자료·입장을 바탕으로 대리 발언을 준비하고 사람의 결정을 보존</li>
+<li>형태: Python FastAPI·JavaScript 기반 로컬 웹 프로젝트</li>
+<li>구현 상태: 문서·채팅 입력을 정리하고 문단·쪽 번호·발언 자료로 사용하는 기능 구현</li>
+<li>확인된 보완점: 단독 CR 줄바꿈, 긴 문장 분할, 짧은 의견 보존, 문단 제한 뒤 반복, 일부 문장 기호 처리</li>
+</ul>
+<p><strong>2. 선택한 적용 방식과 해결할 문제</strong></p>
+<ul>
+<li>팀 적용 방식: <strong>② 기존 기능 개선</strong></li>
+<li>해결할 문제: 입력 형식·글 길이·문장 기호에 따른 처리 차이와 내용 누락을 줄이고 불필요한 페이지 분리 중단</li>
+<li>작업 구성: 같은 개선 방향 안에서 독립된 다섯 수정 작업 배정</li>
+</ul>
+<p><strong>3. 작업이 필요한 이유</strong></p>
+<ul>
+<li>원자료 보존: 줄바꿈이나 글 길이 때문에 문단·짧은 의견이 누락되는 문제 방지</li>
+<li>기준 보완: 지원하는 문장 기호와 보존·제외할 입력을 명확하게 정의</li>
+<li>처리 효율: 결과가 이미 40문단에 도달한 뒤의 추가 페이지 분리 방지</li>
+</ul>
+<p><strong>4. 사용할 자료 또는 수정할 기존 코드</strong></p>
+<ul>
+<li>문서 입력: 같은 두 문장에 LF·CRLF·CR을 적용한 시험용 문자열</li>
+<li>긴 글 입력: 반복 문자 1000·721·420자 및 교차 시험 1081자</li>
+<li>채팅 입력: 찬성·반대·한 글자 의견·공백·사진·이모티콘·링크 안내</li>
+<li>페이지 입력: 한 쪽에 한 문단인 60쪽, 빈 첫 쪽과 둘째 쪽</li>
+<li>문장 입력: 。！？와 기존 .!? 뒤 공백 및 줄바꿈</li>
+<li>수정 코드: <code>app/persona.py</code>의 <code>split_report</code>·<code>split_pages</code>, <code>app/sources.py</code>의 <code>clean_lines</code>, <code>app/ko.py</code>의 <code>sentences</code></li>
+<li>수정 전 보관: 기준 커밋 <code>cf389690fd36f457d7ddeab4ae2b323029d348aa</code>와 <code>BASE_TEXT</code></li>
+</ul>
+<p><strong>5~6. 작업 후 기대 실행 결과·조원별 담당 범위와 완료 기준</strong></p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>이름</th>
+  <th>담당 구현·수정 작업과 범위</th>
+  <th>시험 입력</th>
+  <th>기대 출력·완료 기준</th>
+  <th>교차 검증자</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>김동준</td>
+  <td>split_report의 줄바꿈 정규화 구간</td>
+  <td>같은 두 문장에 LF·CRLF·CR 적용</td>
+  <td>세 입력 모두 같은 두 문단 목록</td>
+  <td>정종원</td>
+</tr>
+<tr>
+  <td>김혜중</td>
+  <td>split_report의 긴 문단 분할 구간</td>
+  <td>마침표 없는 1000자·721자·420자</td>
+  <td>1000자 → [360,360,280]자, 721자 → [360,361]자, 420자 유지. 조각마다 420자 이하·전체 원문 보존</td>
+  <td>김동준</td>
+</tr>
+<tr>
+  <td>노재원</td>
+  <td>clean_lines의 짧은 입력 제외 조건</td>
+  <td>찬성·반대·공백·사진·이모티콘·링크·정상 문장</td>
+  <td>찬성·반대·정상 문장만 남음. 교차 입력의 네·동의도 보존</td>
+  <td>김혜중</td>
+</tr>
+<tr>
+  <td>송준서</td>
+  <td>split_pages의 바깥 반복 종료 조건</td>
+  <td>한 쪽에 한 문단인 60쪽</td>
+  <td>40문단·쪽 번호 1~40 유지, 분리 호출 60회 → 40회</td>
+  <td>노재원</td>
+</tr>
+<tr>
+  <td>정종원</td>
+  <td>sentences의 문장 기호 집합</td>
+  <td>첫 문장。 다음 문장。 및 기호별 입력</td>
+  <td>공백 앞의 새 기호·기존 기호에서 두 문장 분리, 줄바꿈 처리 유지</td>
+  <td>송준서</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>난이도·예상 시간: 1인당 구현·실행·연결·검토 약 1~2시간으로 배분</li>
+<li>통합 연결: 김동준·김혜중의 동일 함수 내 서로 다른 수정 구간을 함께 보존하고 다섯 변경 통합</li>
+<li>검증 범위: 문자열 처리 함수의 입력·출력 및 실제 파일 반영. 실제 PDF 추출·브라우저 클릭은 별도 범위</li>
+</ul>
+<p><strong>실행 환경 및 검증 방법</strong></p>
+<ul>
+<li>실행 환경: Google Colab, Python</li>
+<li>시험 자료: 코드 셀에 직접 입력한 시험용 문장·문자열</li>
+<li>실행 대상: 프로젝트의 실제 함수 원문</li>
+<li>실행 구성: <code>re</code>, 기존 문장 분리 함수, 채팅 상한값 400</li>
+<li>실행 조건: 앱 실행 및 외부 AI API 연결 불필요</li>
+<li>프로젝트 반영: 최종 단계에서 수정 코드를 실제 프로젝트 파일에 저장</li>
+</ul>
+<p><strong>AI 활용 및 기록 범위</strong></p>
+<ul>
+<li>사용 도구: Codex</li>
+<li>요청문: 담당 작업별 요구 사항을 정리하고 말투를 다듬은 프롬프트</li>
+<li>응답 기록: 구현 방법과 채택 판단</li>
+<li>코드 작성·자동 검증 수행: Codex</li>
+<li>조원 이름: 구현·검증 역할의 배정</li>
+<li>기록 범위: 조원별 직접 수행 여부를 입증하는 자료는 아님</li>
+</ul>
+</section><section class="preview-cell" aria-label="02번 텍스트 셀"><div class="preview-label">02 · 텍스트</div><h2>역할 분담과 조원별 완료 기준</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>이름</th>
+  <th>담당 구현·수정 작업</th>
+  <th>완료 기준</th>
+  <th>교차 검증자</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>김동준</td>
+  <td>줄바꿈 통일</td>
+  <td>LF·CRLF·CR의 문단 결과 동일</td>
+  <td>정종원</td>
+</tr>
+<tr>
+  <td>김혜중</td>
+  <td>긴 문단 분할</td>
+  <td>각 조각 420자 이하, 시험 원문 전체 보존</td>
+  <td>김동준</td>
+</tr>
+<tr>
+  <td>노재원</td>
+  <td>짧은 채팅 보존</td>
+  <td>찬성·반대 보존, 빈 입력·안내 제외</td>
+  <td>김혜중</td>
+</tr>
+<tr>
+  <td>송준서</td>
+  <td>반복 처리 조기 종료</td>
+  <td>40문단·쪽 번호 보존, 60쪽 중 분리 호출 40회</td>
+  <td>노재원</td>
+</tr>
+<tr>
+  <td>정종원</td>
+  <td>문장 기호 지원</td>
+  <td>。！？와 기존 .!?·줄바꿈 분리</td>
+  <td>송준서</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>예상 시간: 1인당 구현·시험·연결·검토 약 1~2시간</li>
+<li>통합 확인: 김동준·김혜중이 수정한 같은 함수의 두 변경 구간 모두 보존</li>
+<li>자료 출처: 기준 Git 커밋 및 노트북에서 구성한 시험용 합성 문자열</li>
+<li>개인정보: 실제 개인정보 미사용</li>
+<li>원자료 보관: <code>BASE_TEXT</code>에 수정 전 코드 별도 보관</li>
+<li>시험 구성: 반복 문자로 길이 설정, 사진·빈 입력·짧은 의견 구분</li>
+<li>원문 대조: 출력 목록과 원문 결합 결과 비교</li>
+<li>시각화: 별도 그래프 불필요</li>
+</ul>
+<h2>STEP 2. 작업 자료와 처리·수정 기준 준비</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>자료·코드</th>
+  <th>형식·자료형</th>
+  <th>구성·처리 기준</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>기준 프로젝트</td>
+  <td>Python 소스 문자열</td>
+  <td>Git 커밋 cf389690fd36f457d7ddeab4ae2b323029d348aa. 수정 전 원문은 BASE_TEXT에 별도 보관</td>
+</tr>
+<tr>
+  <td>문단 분리 입력</td>
+  <td>str</td>
+  <td>같은 두 문장에 LF·CRLF·CR을 적용. 기존 문단 8자 필터·최대 40개 기준 유지</td>
+</tr>
+<tr>
+  <td>긴 글</td>
+  <td>str</td>
+  <td>반복 문자 1000·721·420자, 교차 시험 1081자. 40개 문단 제한 이내에서 전체 글자 보존 비교</td>
+</tr>
+<tr>
+  <td>채팅</td>
+  <td>list[str] → list[dict]</td>
+  <td>text는 글, when은 시각. 시험용 시각 누락은 빈 문자열. 공백·안내 제외, 짧은 텍스트 보존</td>
+</tr>
+<tr>
+  <td>페이지</td>
+  <td>list[str]</td>
+  <td>한 쪽에 한 문단인 60쪽과 빈 첫 쪽. 문단·원래 쪽 번호·실제 분리 호출 수 비교</td>
+</tr>
+<tr>
+  <td>문장 분리 입력</td>
+  <td>str → list[str]</td>
+  <td>。！？와 .!? 뒤 공백 및 줄바꿈. 공백 없는 연속 문장 분리는 범위 밖</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>자료 준비·검증일: 2026-11-19</li>
+<li>자료 구분: 구성 조건을 명시한 시험용 합성 입력</li>
+<li>중복 처리: 이번 개선 범위에 포함하지 않음</li>
+<li>누락·추가 확인: 예상 목록 또는 문자열 전체 일치로 비교</li>
+</ul>
+<p><strong>기존 코드·문제 발생 조건·수정 기준</strong></p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>작업</th>
+  <th>작업 성격</th>
+  <th>기존 결과·발생 조건</th>
+  <th>수정 또는 유지 기준</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>줄바꿈 통일</td>
+  <td>입력 처리 오류 수정</td>
+  <td>단독 CR에서 두 문장이 같은 덩어리로 남음</td>
+  <td>세 줄바꿈 형식의 문단 목록 일치</td>
+</tr>
+<tr>
+  <td>긴 문단 분할</td>
+  <td>길이 처리 기준 보완</td>
+  <td>마침표 없는 1000자 문장이 길이 제한을 초과</td>
+  <td>각 조각 420자 이하, 시험 원문 전체 보존</td>
+</tr>
+<tr>
+  <td>짧은 채팅</td>
+  <td>자료 누락 오류 수정</td>
+  <td>4글자 미만 제외 조건으로 찬성·반대 삭제</td>
+  <td>빈 입력·안내는 제외하고 짧은 텍스트 보존</td>
+</tr>
+<tr>
+  <td>반복 종료</td>
+  <td>기존 동작을 유지하는 구조 개선</td>
+  <td>60쪽을 처리하지만 결과는 이미 40문단</td>
+  <td>결과·쪽 번호 동일, 호출 40회로 감소</td>
+</tr>
+<tr>
+  <td>문장 기호</td>
+  <td>처리 기준 보완</td>
+  <td>새 기호 뒤 공백에서 문장이 분리되지 않음</td>
+  <td>새 기호 추가, 기존 기호·줄바꿈 동작 보존</td>
+</tr>
+</tbody>
+</table></div>
+<h2>STEP 3. 개인별 AI 활용과 구현·수정</h2>
+<ul>
+<li>이름별 구성: 목적·완료 기준 → AI 요청·반영 판단 → 기존 코드·시험 입력 → 수정·재실행 → 개인별 참여 기록</li>
+<li>프롬프트 표현: 담당 관점에 맞춰 말투와 길이를 다듬은 요청문</li>
+<li>기록 범위: 실제 학생별 대화 이력을 나타내는 자료는 아님</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="03번 코드 셀"><div class="preview-label">03 · 코드</div><pre><code class="language-python">from pathlib import Path
+import ast
+import re
+import subprocess
+import tempfile
+from types import SimpleNamespace
+
+BASE = &quot;cf389690fd36f457d7ddeab4ae2b323029d348aa&quot;
+WORK = Path(tempfile.mkdtemp(prefix=&quot;minime-simple-&quot;))
+REPO = WORK / &quot;source&quot;
+subprocess.run([&quot;git&quot;, &quot;clone&quot;, &quot;--quiet&quot;, &quot;https://github.com/jkzk1397/minime.git&quot;, str(REPO)], check=True)
+subprocess.run([&quot;git&quot;, &quot;checkout&quot;, &quot;--quiet&quot;, &quot;--detach&quot;, BASE], cwd=REPO, check=True)
+FILES = [&quot;app/persona.py&quot;, &quot;app/sources.py&quot;, &quot;app/ko.py&quot;]
+BASE_TEXT = {path: (REPO / path).read_text(encoding=&quot;utf-8&quot;) for path in FILES}
+CHANGES = {}
+
+def function_source(text, name):
+    node = next(n for n in ast.parse(text).body
+                if isinstance(n, ast.FunctionDef) and n.name == name)
+    return &quot;\n&quot;.join(text.splitlines()[node.lineno - 1:node.end_lineno])
+
+def load_functions(texts):
+    # 실제 소스에서 네 함수만 추출해 실행한다. 웹 서버·AI 연결은 필요 없다.
+    scope = {&quot;re&quot;: re, &quot;MAX_CHAT_LINES&quot;: 400}
+    exec(function_source(texts[&quot;app/ko.py&quot;], &quot;sentences&quot;), scope)
+    scope[&quot;ko&quot;] = SimpleNamespace(sentences=scope[&quot;sentences&quot;])
+    for path, name in [(&quot;app/persona.py&quot;, &quot;split_report&quot;),
+                       (&quot;app/persona.py&quot;, &quot;split_pages&quot;), (&quot;app/sources.py&quot;, &quot;clean_lines&quot;)]:
+        exec(function_source(texts[path], name), scope)
+    return scope
+
+def changed(texts, change):
+    path, old, new = change
+    result = dict(texts)
+    if result[path].count(old) != 1:
+        raise ValueError(&quot;수정 대상 코드가 정확히 한 곳이어야 합니다.&quot;)
+    result[path] = result[path].replace(old, new, 1)
+    return result
+
+RESULTS = []
+def check(label, expected, actual):
+    ok = expected == actual
+    RESULTS.append(ok)
+    print(label)
+    # 긴 원문 대신 길이와 앞부분을 출력하고 판정은 전체 값으로 한다.
+    def display(value):
+        return f&quot;문자열 {len(value)}자: {value[:30]}…&quot; if isinstance(value, str) and len(value) &gt; 100 else value
+    print(&quot;  예상:&quot;, display(expected))
+    print(&quot;  실제:&quot;, display(actual))
+    print(&quot;  판정:&quot;, &quot;통과&quot; if ok else &quot;개선 필요&quot;)
+
+print(&quot;기준 코드 준비 완료. 파일 업로드·AI API 키·라이브러리 설치 없이 시험합니다.&quot;)
+</code></pre></section><section class="preview-cell" aria-label="04번 텍스트 셀"><div class="preview-label">04 · 텍스트</div><h2>김동준 · 줄바꿈 형식 통일</h2>
+<p><strong>담당 작업·완료 기준</strong></p>
+<ul>
+<li>LF·CRLF·CR 입력에서 같은 두 문단을 반환한다.</li>
+</ul>
+<p><strong>코드 위치</strong></p>
+<ul>
+<li><code>app/persona.py</code>의 <code>split_report</code>. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.</li>
+</ul>
+<p><strong>AI 요청 · 담당별 요청문</strong></p>
+<blockquote>
+<p>MINIME 문서 입력에서 줄바꿈 때문에 결과가 달라지는 걸 고치고 싶어.
+대상은 app/persona.py의 Python split_report이고, 다음 셀에서 출력하는 기존 함수 원문을 봐줘. 지금은 CRLF만 LF로 바꿔서 단독 CR로 붙인 두 문장이 따로 나뉘지 않아.
+시험용 입력은 '첫 번째 시험용 문단입니다.'와 '두 번째 시험용 문단입니다.'를 LF·CRLF·CR로 이어 붙인 세 가지야. Colab에서 셋 다 같은 두 문단이 나오게 해 줘. 문단 내용과 순서는 그대로 남겨줘.
+김혜중이 같은 함수의 긴 글 분할 구간을 고치니까 나는 줄바꿈 정규화 구간만 바꾸고 싶어. 송준서의 split_pages에서 계속 호출할 수 있게 함수 이름과 문자열 목록 반환 방식도 유지해 줘.</p>
+</blockquote>
+<p><strong>입력·환경·연결 조건</strong></p>
+<ul>
+<li>언어·도구: Python, Google Colab</li>
+<li>제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문</li>
+<li>연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지</li>
+</ul>
+<p><strong>AI 응답·채택 이유</strong></p>
+<ul>
+<li>CRLF를 LF로 바꾼 뒤 남은 CR을 LF로 바꾸면 두 글자 줄바꿈이 중복 변환되지 않는다.</li>
+<li>기존 문단 분리 단계 앞에 적용한다.</li>
+</ul>
+<p><strong>처리·수정 기준</strong></p>
+<ul>
+<li>CRLF를 먼저 LF로 바꾸고 남은 CR을 LF로 바꾼다.</li>
+<li>문단 순서와 내용은 유지한다.</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="05번 코드 셀"><div class="preview-label">05 · 코드</div><pre><code class="language-python"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+TEST_1 = &#x27;first = &quot;첫 번째 시험용 문단입니다.&quot;\nsecond = &quot;두 번째 시험용 문단입니다.&quot;\ninputs = [first + sep + second for sep in [&quot;\\n&quot;, &quot;\\r\\n&quot;, &quot;\\r&quot;]]\nfor label, text in zip([&quot;LF&quot;, &quot;CRLF&quot;, &quot;CR&quot;], inputs):\n    check(label, [first, second], split_report(text))\n&#x27;
+before_scope_1 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_1, dict(before_scope_1, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell preview-code" aria-label="06번 코드 셀"><div class="preview-label">06 · 코드</div><pre><code class="language-python">OLD_1 = &#x27;text = text.replace(&quot;\\r\\n&quot;, &quot;\\n&quot;).strip()&#x27;
+NEW_1 = &#x27;text = text.replace(&quot;\\r\\n&quot;, &quot;\\n&quot;).replace(&quot;\\r&quot;, &quot;\\n&quot;).strip()&#x27;
+CHANGES[1] = (&#x27;app/persona.py&#x27;, OLD_1, NEW_1)
+PERSONAL_1 = changed(BASE_TEXT, CHANGES[1])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_1[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+after_scope_1 = load_functions(PERSONAL_1)
+RESULTS.clear()
+exec(TEST_1, dict(after_scope_1, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell" aria-label="07번 텍스트 셀"><div class="preview-label">07 · 텍스트</div><h3>김동준 · 개인별 참여 기록</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>기록 항목</th>
+  <th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>담당 작업</td>
+  <td>줄바꿈 통일. 완료 기준: LF·CRLF·CR 입력에서 같은 두 문단을 반환한다.</td>
+</tr>
+<tr>
+  <td>AI 활용</td>
+  <td>앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다.</td>
+</tr>
+<tr>
+  <td>개인 결과물</td>
+  <td><code>app/persona.py · split_report</code>. <code>CHANGES[1]</code>, <code>PERSONAL_1</code>, <code>TEST_1</code>에 변경과 입력을 보관한다. 확인 결과: LF·CRLF·CR 모두 같은 두 문단.</td>
+</tr>
+<tr>
+  <td>교차 검증</td>
+  <td>김혜중의 1081자 입력에서 원문 보존 및 각 조각 420자 이하 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다.</td>
+</tr>
+<tr>
+  <td>최종 시험</td>
+  <td>통합 파일 재로딩 후 LF·CRLF·CR로 같은 문장 입력 → 같은 두 문단 예상·실제 일치. STEP 5 실행 출력 참조.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>전후 비교와 분석</strong><br />
+세 줄바꿈 입력의 기대값은 같은 두 문단이다. 기존 단독 CR은 문단을 분리하지 못하지만 수정 후에는 동일 결과가 된다.</p>
+<ul>
+<li>검증 방법: 코드·원자료·출력 비교</li>
+<li>실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정</li>
+<li>수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조</li>
+</ul>
+</section><section class="preview-cell" aria-label="08번 텍스트 셀"><div class="preview-label">08 · 텍스트</div><h2>김혜중 · 긴 문단의 길이 제한</h2>
+<p><strong>담당 작업·완료 기준</strong></p>
+<ul>
+<li>시험 범위의 긴 문단을 조각마다 420자 이하로 나누고 원문 글자를 모두 보존한다.</li>
+</ul>
+<p><strong>코드 위치</strong></p>
+<ul>
+<li><code>app/persona.py</code>의 <code>split_report</code>. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.</li>
+</ul>
+<p><strong>AI 요청 · 담당별 요청문</strong></p>
+<blockquote>
+<p>Python·Google Colab에서 MINIME의 긴 문단 분할을 개선하려고 합니다. app/persona.py의 split_report가 대상이며, 관련 기존 함수 원문은 다음 코드 셀에 있습니다.</p>
+<p>현재 증상은 마침표 없는 1000자 문자열이 하나의 긴 문장으로 남아 길이 제한을 만족하지 못하는 것입니다. 시험용 자료는 '가'를 1000회·721회·420회 반복한 문자열로 구성하겠습니다.</p>
+<p>다음 조건을 충족하는 수정 코드를 제안해 주세요.</p>
+<ol>
+<li>결과 조각은 각각 420자 이하여야 합니다.</li>
+<li>조각을 순서대로 이어 붙이면 시험 원문 전체와 정확히 같아야 합니다.</li>
+<li>끝에 1~7자가 남아도 기존 8자 필터 때문에 삭제되지 않아야 합니다.</li>
+<li>420자 정상 입력과 기존 문단 최대 40개 기준은 유지해 주세요. 전체 보존 시험은 이 개수 제한 이내에서 진행합니다.</li>
+</ol>
+<p>360자 단위로 나누고 짧은 끝부분을 앞 조각에 합치는 방법이라면 1000자는 360·360·280자, 721자는 360·361자로 나오는지도 확인해 주세요.
+김동준은 같은 함수의 줄바꿈 구간을 수정하므로 그 부분을 덮어쓰지 않도록 변경 구간을 분리해 주세요. 송준서의 split_pages와 연결되는 함수 이름·호출 방식·반환 목록 형식도 유지해 주세요.</p>
+</blockquote>
+<p><strong>입력·환경·연결 조건</strong></p>
+<ul>
+<li>언어·도구: Python, Google Colab</li>
+<li>제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문</li>
+<li>연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지</li>
+</ul>
+<p><strong>AI 응답·채택 이유</strong></p>
+<ul>
+<li>문장 단위 분할을 고정 길이 360자 분할로 바꾼다.</li>
+<li>마지막 조각이 8자보다 짧으면 앞 조각에 붙인다.</li>
+<li>가장 긴 조각도 367자이므로 420자 한도를 지키며 끝부분 누락도 방지한다.</li>
+</ul>
+<p><strong>처리·수정 기준</strong></p>
+<ul>
+<li>360자 단위 분할 후 8자 미만 꼬리는 앞 조각에 합친다.</li>
+<li>전체 보존은 기존 40문단 상한 이내의 시험 입력에서 비교한다.</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="09번 코드 셀"><div class="preview-label">09 · 코드</div><pre><code class="language-python"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+TEST_2 = &#x27;for size in [1000, 721, 420]:\n    text = &quot;가&quot; * size\n    result = split_report(text)\n    print(&quot;입력 길이:&quot;, size, &quot;출력 조각 길이:&quot;, [len(x) for x in result])\n    check(f&quot;{size}자 길이 제한&quot;, True, all(len(x) &lt;= 420 for x in result))\n    check(f&quot;{size}자 원문 보존&quot;, text, &quot;&quot;.join(result))\n&#x27;
+before_scope_2 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_2, dict(before_scope_2, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell preview-code" aria-label="10번 코드 셀"><div class="preview-label">10 · 코드</div><pre><code class="language-python">OLD_2 = &#x27;        buf = &quot;&quot;\n        for s in ko.sentences(para):\n            if len(buf) + len(s) &gt; 360 and buf:\n                out.append(buf.strip())\n                buf = &quot;&quot;\n            buf += &quot; &quot; + s\n        if buf.strip():\n            out.append(buf.strip())&#x27;
+NEW_2 = &#x27;        # 문장 부호가 없어도 길이를 제한하고 모든 글자를 보존한다.\n        pieces = [para[i:i + 360] for i in range(0, len(para), 360)]\n        # 8자 미만 꼬리가 마지막 필터에서 사라지지 않게 앞 조각에 붙인다.\n        if len(pieces) &gt; 1 and len(pieces[-1]) &lt; 8:\n            tail = pieces.pop()\n            pieces[-1] += tail\n        out.extend(pieces)&#x27;
+CHANGES[2] = (&#x27;app/persona.py&#x27;, OLD_2, NEW_2)
+PERSONAL_2 = changed(BASE_TEXT, CHANGES[2])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_2[&#x27;app/persona.py&#x27;], &#x27;split_report&#x27;))
+after_scope_2 = load_functions(PERSONAL_2)
+RESULTS.clear()
+exec(TEST_2, dict(after_scope_2, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell" aria-label="11번 텍스트 셀"><div class="preview-label">11 · 텍스트</div><h3>김혜중 · 개인별 참여 기록</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>기록 항목</th>
+  <th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>담당 작업</td>
+  <td>긴 문단 분할. 완료 기준: 시험 범위의 긴 문단을 조각마다 420자 이하로 나누고 원문 글자를 모두 보존한다.</td>
+</tr>
+<tr>
+  <td>AI 활용</td>
+  <td>앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다.</td>
+</tr>
+<tr>
+  <td>개인 결과물</td>
+  <td><code>app/persona.py · split_report</code>. <code>CHANGES[2]</code>, <code>PERSONAL_2</code>, <code>TEST_2</code>에 변경과 입력을 보관한다. 확인 결과: 1000자 → 360·360·280자, 721자 → 360·361자, 원문 보존.</td>
+</tr>
+<tr>
+  <td>교차 검증</td>
+  <td>노재원의 네·동의 보존, 빈 글·파일 제외 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다.</td>
+</tr>
+<tr>
+  <td>최종 시험</td>
+  <td>통합 파일 재로딩 후 1000·721·420자 입력 → 길이 제한·원문 보존 예상·실제 일치. STEP 5 실행 출력 참조.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>전후 비교와 분석</strong><br />
+기존 1000자 문장은 1000자로 남아 길이 검사를 실패한다. 수정 후 360·360·280자로 나뉜다. 721자는 360·361자로 끝 1자도 보존한다. 420자 정상 입력은 그대로다.</p>
+<ul>
+<li>검증 방법: 코드·원자료·출력 비교</li>
+<li>실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정</li>
+<li>수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조</li>
+</ul>
+</section><section class="preview-cell" aria-label="12번 텍스트 셀"><div class="preview-label">12 · 텍스트</div><h2>노재원 · 짧은 채팅 보존</h2>
+<p><strong>담당 작업·완료 기준</strong></p>
+<ul>
+<li>찬성·반대·한 글자 의견을 보존하고 빈 입력·안내는 제외한다.</li>
+</ul>
+<p><strong>코드 위치</strong></p>
+<ul>
+<li><code>app/sources.py</code>의 <code>clean_lines</code>. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.</li>
+</ul>
+<p><strong>AI 요청 · 담당별 요청문</strong></p>
+<blockquote>
+<p>찬성이나 반대 같은 짧은 채팅을 놓치지 않게 바꾸고 싶어요. 다음 셀의 app/sources.py clean_lines 기존 Python 코드를 확인해 주실래요? 지금은 4글자 미만이면 제외돼서 두 의견도 없어집니다.
+Colab에서 ['찬성', '반대', ' ', '사진', '이모티콘', 'https://example.com', '출시 일정에 찬성합니다.']를 넣어 찬성·반대·마지막 문장만 남는지 보고 싶어요. 빈 입력과 기존 안내 패턴은 계속 제외하고 한 글자 내용도 보존해 주세요.
+다른 담당의 문서 함수와 별개로 이 제외 조건만 수정하고, 앱 채팅 가져오기에서 계속 쓸 수 있도록 text·when 객체 목록과 최대 400개 반환 기준은 유지해 주세요.</p>
+</blockquote>
+<p><strong>입력·환경·연결 조건</strong></p>
+<ul>
+<li>언어·도구: Python, Google Colab</li>
+<li>제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문</li>
+<li>연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지</li>
+</ul>
+<p><strong>AI 응답·채택 이유</strong></p>
+<ul>
+<li>문자 수 4 미만 조건을 빈 문자열 조건으로 바꾼다.</li>
+<li>기존 제외 패턴은 유지한다.</li>
+<li>한 글자도 보존하는 정책이므로 이번 기준은 의미 자동 판별이 아니라 짧은 내용의 일괄 보존이다.</li>
+</ul>
+<p><strong>처리·수정 기준</strong></p>
+<ul>
+<li>빈 텍스트와 기존 안내 패턴은 제외한다.</li>
+<li>의미를 AI로 분류하지 않고 짧은 비어 있지 않은 텍스트를 보존한다.</li>
+<li>text·when 구조와 최대 400개 반환은 유지한다.</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="13번 코드 셀"><div class="preview-label">13 · 코드</div><pre><code class="language-python"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/sources.py&#x27;], &#x27;clean_lines&#x27;))
+TEST_3 = &#x27;text = [&quot;찬성&quot;, &quot;반대&quot;, &quot; &quot;, &quot;사진&quot;, &quot;이모티콘&quot;, &quot;https://example.com&quot;, &quot;출시 일정에 찬성합니다.&quot;]\nprint(&quot;시험 입력:&quot;, text)\ncheck(&quot;짧은 의견 보존과 안내 제외&quot;, [&quot;찬성&quot;, &quot;반대&quot;, &quot;출시 일정에 찬성합니다.&quot;],\n      [row[&quot;text&quot;] for row in clean_lines(text)])\n&#x27;
+before_scope_3 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_3, dict(before_scope_3, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell preview-code" aria-label="14번 코드 셀"><div class="preview-label">14 · 코드</div><pre><code class="language-python">OLD_3 = &#x27;if len(t) &lt; 4 or skip.match(t):&#x27;
+NEW_3 = &#x27;if not t or skip.match(t):&#x27;
+CHANGES[3] = (&#x27;app/sources.py&#x27;, OLD_3, NEW_3)
+PERSONAL_3 = changed(BASE_TEXT, CHANGES[3])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_3[&#x27;app/sources.py&#x27;], &#x27;clean_lines&#x27;))
+after_scope_3 = load_functions(PERSONAL_3)
+RESULTS.clear()
+exec(TEST_3, dict(after_scope_3, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell" aria-label="15번 텍스트 셀"><div class="preview-label">15 · 텍스트</div><h3>노재원 · 개인별 참여 기록</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>기록 항목</th>
+  <th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>담당 작업</td>
+  <td>짧은 채팅 보존. 완료 기준: 찬성·반대·한 글자 의견을 보존하고 빈 입력·안내는 제외한다.</td>
+</tr>
+<tr>
+  <td>AI 활용</td>
+  <td>앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다.</td>
+</tr>
+<tr>
+  <td>개인 결과물</td>
+  <td><code>app/sources.py · clean_lines</code>. <code>CHANGES[3]</code>, <code>PERSONAL_3</code>, <code>TEST_3</code>에 변경과 입력을 보관한다. 확인 결과: 찬성·반대·긴 문장 보존, 공백·안내 제외.</td>
+</tr>
+<tr>
+  <td>교차 검증</td>
+  <td>송준서의 빈 첫 쪽 뒤 출처 [2] 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다.</td>
+</tr>
+<tr>
+  <td>최종 시험</td>
+  <td>통합 파일 재로딩 후 의견·공백·안내 혼합 입력 → 찬성·반대·긴 문장 예상·실제 일치. STEP 5 실행 출력 참조.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>전후 비교와 분석</strong><br />
+기존 결과는 긴 문장만 남는다. 수정 후 찬성·반대·긴 문장이 남고 빈 입력·사진·이모티콘·링크는 제외된다. 짧은 의견의 의미를 추론하지 않고 비어 있지 않은 텍스트를 보존하는 기준이다.</p>
+<ul>
+<li>검증 방법: 코드·원자료·출력 비교</li>
+<li>실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정</li>
+<li>수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조</li>
+</ul>
+</section><section class="preview-cell" aria-label="16번 텍스트 셀"><div class="preview-label">16 · 텍스트</div><h2>송준서 · 문단 제한 후 불필요한 처리 종료</h2>
+<p><strong>담당 작업·완료 기준</strong></p>
+<ul>
+<li>결과 40문단과 원래 쪽 번호를 유지하고 60쪽 입력의 분리 호출을 40회로 줄인다.</li>
+</ul>
+<p><strong>코드 위치</strong></p>
+<ul>
+<li><code>app/persona.py</code>의 <code>split_pages</code>. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.</li>
+</ul>
+<p><strong>AI 요청 · 담당별 요청문</strong></p>
+<blockquote>
+<p>작업 목적: MINIME의 불필요한 페이지 분리 줄이기.
+언어·도구: Python, Google Colab.
+관련 코드: app/persona.py의 split_pages. 다음 셀의 기존 함수 원문 사용.
+현재 증상: 안쪽 break만 있어 40문단 이후에도 다음 페이지의 split_report 호출이 이어짐.
+시험 입력: 한 쪽에 한 문단인 시험용 페이지 60개.
+기대 결과: 기존처럼 40문단·쪽 번호 1~40 반환, 실제 분리 호출은 40회.
+수정 조건: 바깥 반복에서 먼저 종료 여부 검사. 한 페이지 안의 40개 제한도 유지.
+담당 연결: 김동준·김혜중이 수정한 split_report를 그대로 호출. 반환 튜플과 쪽 번호 대응 유지. Colab에서는 기존 함수를 감싼 계수 함수로 호출 수를 확인해 주세요.</p>
+</blockquote>
+<p><strong>입력·환경·연결 조건</strong></p>
+<ul>
+<li>언어·도구: Python, Google Colab</li>
+<li>제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문</li>
+<li>연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지</li>
+</ul>
+<p><strong>AI 응답·채택 이유</strong></p>
+<ul>
+<li>페이지 반복문 안에서 문단 수를 먼저 검사한다.</li>
+<li>40개면 다음 페이지를 분리하지 않고 종료한다.</li>
+<li>기존 안쪽 제한도 두어 한 페이지에 문단이 많아도 40개만 보존한다.</li>
+</ul>
+<p><strong>처리·수정 기준</strong></p>
+<ul>
+<li>페이지 분리 전에 문단 수를 검사한다.</li>
+<li>한 페이지 안에서도 최대 40개만 추가한다.</li>
+<li>시험용 계수 함수로 실제 호출 수를 측정한다.</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="17번 코드 셀"><div class="preview-label">17 · 코드</div><pre><code class="language-python"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/persona.py&#x27;], &#x27;split_pages&#x27;))
+TEST_4 = &#x27;pages = [&quot;첫 번째 시험용 문단입니다.&quot;] * 60\noriginal_split = split_report\ncalls = []\ndef counted(text):\n    calls.append(text)\n    return original_split(text)\nsplit_pages.__globals__[&quot;split_report&quot;] = counted\ntry:\n    paragraphs, numbers = split_pages(pages)\nfinally:\n    split_pages.__globals__[&quot;split_report&quot;] = original_split\ncheck(&quot;문단 40개 유지&quot;, 40, len(paragraphs))\ncheck(&quot;원래 쪽 번호 유지&quot;, list(range(1, 41)), numbers)\ncheck(&quot;처리한 페이지 수&quot;, 40, len(calls))\n&#x27;
+before_scope_4 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_4, dict(before_scope_4, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell preview-code" aria-label="18번 코드 셀"><div class="preview-label">18 · 코드</div><pre><code class="language-python">OLD_4 = &#x27;    for n, text in enumerate(pages, 1):\n        for para in split_report(text or &quot;&quot;):&#x27;
+NEW_4 = &#x27;    for n, text in enumerate(pages, 1):\n        if len(paras) &gt;= 40:\n            break\n        for para in split_report(text or &quot;&quot;):&#x27;
+CHANGES[4] = (&#x27;app/persona.py&#x27;, OLD_4, NEW_4)
+PERSONAL_4 = changed(BASE_TEXT, CHANGES[4])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_4[&#x27;app/persona.py&#x27;], &#x27;split_pages&#x27;))
+after_scope_4 = load_functions(PERSONAL_4)
+RESULTS.clear()
+exec(TEST_4, dict(after_scope_4, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell" aria-label="19번 텍스트 셀"><div class="preview-label">19 · 텍스트</div><h3>송준서 · 개인별 참여 기록</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>기록 항목</th>
+  <th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>담당 작업</td>
+  <td>페이지 처리 조기 종료. 완료 기준: 결과 40문단과 원래 쪽 번호를 유지하고 60쪽 입력의 분리 호출을 40회로 줄인다.</td>
+</tr>
+<tr>
+  <td>AI 활용</td>
+  <td>앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다.</td>
+</tr>
+<tr>
+  <td>개인 결과물</td>
+  <td><code>app/persona.py · split_pages</code>. <code>CHANGES[4]</code>, <code>PERSONAL_4</code>, <code>TEST_4</code>에 변경과 입력을 보관한다. 확인 결과: 문단 40개·쪽 번호 1~40 유지, 호출 60→40회.</td>
+</tr>
+<tr>
+  <td>교차 검증</td>
+  <td>정종원의 새 기호·기존 기호 혼용 입력이 세 문장인지 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다.</td>
+</tr>
+<tr>
+  <td>최종 시험</td>
+  <td>통합 파일 재로딩 후 60쪽 입력 → 40문단·번호 1~40·호출 40회 예상·실제 일치. STEP 5 실행 출력 참조.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>전후 비교와 분석</strong><br />
+기존과 수정 후 모두 문단 40개와 쪽 번호 1~40은 같다. 분리 함수 호출 수는 60회에서 40회로 줄어든다. 시험용 계수 함수는 실제 split_report를 그대로 호출하고 시험 후 복원한다.</p>
+<ul>
+<li>검증 방법: 코드·원자료·출력 비교</li>
+<li>실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정</li>
+<li>수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조</li>
+</ul>
+</section><section class="preview-cell" aria-label="20번 텍스트 셀"><div class="preview-label">20 · 텍스트</div><h2>정종원 · 문장 구분 기호 보완</h2>
+<p><strong>담당 작업·완료 기준</strong></p>
+<ul>
+<li>새 기호 。！？와 기존 .!? 뒤 공백 및 줄바꿈을 문장 경계로 처리한다.</li>
+</ul>
+<p><strong>코드 위치</strong></p>
+<ul>
+<li><code>app/ko.py</code>의 <code>sentences</code>. 아래 기존 코드와 수정 코드에 실제 변경 부분이 표시된다.</li>
+</ul>
+<p><strong>AI 요청 · 담당별 요청문</strong></p>
+<blockquote>
+<p>MINIME 문장을 나누는 기호를 조금 늘려보자. Python으로 작성된 app/ko.py의 sentences가 대상이고, 다음 셀에 실제 기존 코드를 넣었어. 지금 정규식은 .!? 뒤 공백과 줄바꿈만 나눠서 '첫 문장。 다음 문장。'은 한 덩어리로 남아.
+Google Colab에서 같은 두 문장을 。, ！, ？로 연결한 시험용 입력이 각각 두 문장으로 나오게 해 줘. 기존 .!?와 줄바꿈도 계속 처리하고 기호 자체는 지우지 말아줘. 공백 없는 연속 문장까지 범위를 넓히지는 말자.
+다른 담당이 사용하는 문서 처리와 호환되게 ko.sentences의 이름과 목록 반환 형식은 유지해 줘. 특히 김혜중의 긴 문단 분할은 이 함수를 고치지 않아도 독립적으로 시험할 수 있어야 해.</p>
+</blockquote>
+<p><strong>입력·환경·연결 조건</strong></p>
+<ul>
+<li>언어·도구: Python, Google Colab</li>
+<li>제공 코드: 다음 코드 셀에 포함된 실제 기존 함수 원문</li>
+<li>연결 조건: 기존 프로젝트의 함수 이름·호출 방식 유지</li>
+</ul>
+<p><strong>AI 응답·채택 이유</strong></p>
+<ul>
+<li>정규식의 문장 끝 기호 집합에 。！？를 추가한다.</li>
+<li>기호 뒤 공백 조건은 유지해 지원 범위를 분명히 한다.</li>
+<li>공백 없는 연속 문장 분리는 이번 범위에 포함하지 않는다.</li>
+</ul>
+<p><strong>처리·수정 기준</strong></p>
+<ul>
+<li>기호 뒤 공백과 줄바꿈을 경계로 쓴다.</li>
+<li>원문 기호는 보존하고 빈 문장은 제외한다.</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="21번 코드 셀"><div class="preview-label">21 · 코드</div><pre><code class="language-python"># 이 셀의 입력 문장·길이를 바꾸어 추가 시험할 수 있다.
+print(function_source(BASE_TEXT[&#x27;app/ko.py&#x27;], &#x27;sentences&#x27;))
+TEST_5 = &#x27;for separator in [&quot;。&quot;, &quot;！&quot;, &quot;？&quot;, &quot;.&quot;, &quot;!&quot;, &quot;?&quot;]:\n    text = &quot;첫 문장&quot; + separator + &quot; 다음 문장&quot; + separator\n    check(&quot;기호 &quot; + separator, [&quot;첫 문장&quot; + separator, &quot;다음 문장&quot; + separator], sentences(text))\ncheck(&quot;줄바꿈&quot;, [&quot;첫 문장&quot;, &quot;다음 문장&quot;], sentences(&quot;첫 문장\\n다음 문장&quot;))\n&#x27;
+before_scope_5 = load_functions(BASE_TEXT)
+RESULTS.clear()
+exec(TEST_5, dict(before_scope_5, check=check))
+print(&quot;수정 전 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell preview-code" aria-label="22번 코드 셀"><div class="preview-label">22 · 코드</div><pre><code class="language-python">OLD_5 = &#x27;(?&lt;=[.!?])\\s+|\\n+&#x27;
+NEW_5 = &#x27;(?&lt;=[.!?。！？])\\s+|\\n+&#x27;
+CHANGES[5] = (&#x27;app/ko.py&#x27;, OLD_5, NEW_5)
+PERSONAL_5 = changed(BASE_TEXT, CHANGES[5])
+print(&quot;수정 함수 원문:&quot;)
+print(function_source(PERSONAL_5[&#x27;app/ko.py&#x27;], &#x27;sentences&#x27;))
+after_scope_5 = load_functions(PERSONAL_5)
+RESULTS.clear()
+exec(TEST_5, dict(after_scope_5, check=check))
+assert all(RESULTS)
+print(&quot;수정 후 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+</code></pre></section><section class="preview-cell" aria-label="23번 텍스트 셀"><div class="preview-label">23 · 텍스트</div><h3>정종원 · 개인별 참여 기록</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>기록 항목</th>
+  <th>내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>담당 작업</td>
+  <td>문장 기호 지원. 완료 기준: 새 기호 。！？와 기존 .!? 뒤 공백 및 줄바꿈을 문장 경계로 처리한다.</td>
+</tr>
+<tr>
+  <td>AI 활용</td>
+  <td>앞의 이름별 요청문·응답에 입력 조건과 유지할 동작을 정리했다. 채택·변경 이유는 해당 AI 응답·채택 이유 및 처리·수정 기준에 기록했다.</td>
+</tr>
+<tr>
+  <td>개인 결과물</td>
+  <td><code>app/ko.py · sentences</code>. <code>CHANGES[5]</code>, <code>PERSONAL_5</code>, <code>TEST_5</code>에 변경과 입력을 보관한다. 확인 결과: 새 기호 3개와 기존 기호·줄바꿈 모두 분리.</td>
+</tr>
+<tr>
+  <td>교차 검증</td>
+  <td>김동준의 CR·CRLF 혼합 입력이 세 문단인지 확인. 아래 STEP 4 실행 셀의 이름별 예상·실제·판정 출력이 근거다.</td>
+</tr>
+<tr>
+  <td>최종 시험</td>
+  <td>통합 파일 재로딩 후 기호별 입력 → 두 문장, 줄바꿈 입력 → 두 문장 예상·실제 일치. STEP 5 실행 출력 참조.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>전후 비교와 분석</strong><br />
+기존 .!?와 줄바꿈은 유지되고 。！？ 뒤 공백도 문장 분리로 처리된다. 공백 없는 연속 문장의 분리까지 보장하는 것은 아니다.</p>
+<ul>
+<li>검증 방법: 코드·원자료·출력 비교</li>
+<li>실행 근거: 개인 실행 셀 및 통합 실행 셀의 예상·실제·판정</li>
+<li>수행 주체: 첫 셀의 AI 활용 및 기록 범위 참조</li>
+</ul>
+</section><section class="preview-cell" aria-label="24번 텍스트 셀"><div class="preview-label">24 · 텍스트</div><h2>STEP 4. 조원 간 교차 검증</h2>
+<ul>
+<li>검증 방법: 짧은 추가 입력 실행 후 예상·실제 출력 대조</li>
+<li>검증 대상: 각 담당의 개인 수정본</li>
+<li>실행 근거: 다음 셀의 검증자 이름별 출력</li>
+<li>기록 범위: 자동 검증 결과이며 사람의 직접 수행 여부와 구분</li>
+</ul>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>검증자 → 담당</th>
+  <th>다른 시험 입력</th>
+  <th>예상 결과</th>
+  <th>실제 결과·판정 및 근거</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>김동준 → 김혜중</td>
+  <td>1081자 반복 글</td>
+  <td>끝 1자 보존, 최대 420자</td>
+  <td>예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조</td>
+</tr>
+<tr>
+  <td>김혜중 → 노재원</td>
+  <td>네·동의·빈 글·파일</td>
+  <td>네·동의만 보존</td>
+  <td>예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조</td>
+</tr>
+<tr>
+  <td>노재원 → 송준서</td>
+  <td>빈 첫 쪽과 둘째 쪽</td>
+  <td>쪽 번호 [2]</td>
+  <td>예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조</td>
+</tr>
+<tr>
+  <td>송준서 → 정종원</td>
+  <td>새 기호와 기존 기호 혼용</td>
+  <td>세 문장</td>
+  <td>예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조</td>
+</tr>
+<tr>
+  <td>정종원 → 김동준</td>
+  <td>CR·CRLF 혼합 글</td>
+  <td>세 문단</td>
+  <td>예상과 일치·통과. 다음 실행 셀의 해당 검증자 출력 참조</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>실제 결과·판정: 다음 셀의 이름별 출력에 표시</li>
+<li>실패 시 조치: 구현 수정 → 개인 시험 → 교차 시험 → 통합 시험 재실행</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="25번 코드 셀"><div class="preview-label">25 · 코드</div><pre><code class="language-python">print(&quot;\n김동준 → 김혜중&quot;)
+RESULTS.clear()
+exec(&#x27;text = &quot;나&quot; * 1081\nparts = split_report(text)\ncheck(&quot;끝 1자까지 보존&quot;, text, &quot;&quot;.join(parts))\ncheck(&quot;모든 조각 420자 이하&quot;, True, all(len(p) &lt;= 420 for p in parts))&#x27;, dict(after_scope_2, check=check))
+assert all(RESULTS)
+print(&quot;\n김혜중 → 노재원&quot;)
+RESULTS.clear()
+exec(&#x27;check(&quot;한 글자·동의 보존&quot;, [&quot;네&quot;, &quot;동의&quot;], [x[&quot;text&quot;] for x in clean_lines([&quot;네&quot;, &quot;동의&quot;, &quot;&quot;, &quot;파일&quot;])])&#x27;, dict(after_scope_3, check=check))
+assert all(RESULTS)
+print(&quot;\n노재원 → 송준서&quot;)
+RESULTS.clear()
+exec(&#x27;paragraphs, pages = split_pages([&quot;&quot;, &quot;두 번째 쪽의 시험용 문장입니다.&quot;])\ncheck(&quot;빈 첫 쪽의 번호 보존&quot;, [2], pages)&#x27;, dict(after_scope_4, check=check))
+assert all(RESULTS)
+print(&quot;\n송준서 → 정종원&quot;)
+RESULTS.clear()
+exec(&#x27;check(&quot;새 기호와 기존 기호 혼용&quot;, [&quot;확인。&quot;, &quot;질문?&quot;, &quot;완료!&quot;], sentences(&quot;확인。 질문? 완료!&quot;))&#x27;, dict(after_scope_5, check=check))
+assert all(RESULTS)
+print(&quot;\n정종원 → 김동준&quot;)
+RESULTS.clear()
+exec(&#x27;check(&quot;혼합 줄바꿈&quot;, [&quot;첫 번째 시험 문단입니다.&quot;, &quot;두 번째 시험 문단입니다.&quot;, &quot;세 번째 시험 문단입니다.&quot;],\n      split_report(&quot;첫 번째 시험 문단입니다.\\r두 번째 시험 문단입니다.\\r\\n세 번째 시험 문단입니다.&quot;))&#x27;, dict(after_scope_1, check=check))
+assert all(RESULTS)
+</code></pre></section><section class="preview-cell" aria-label="26번 텍스트 셀"><div class="preview-label">26 · 텍스트</div><h2>STEP 5. 프로젝트 반영 및 최종 동작 확인</h2>
+<ul>
+<li>반영 순서: 기준 코드에 담당별 변경 구간 적용 → 실제 파일 저장 → 파일 재로딩 → 시험</li>
+<li>통합 확인: 같은 <code>split_report</code>를 수정한 두 변경을 모두 반영</li>
+</ul>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+  <th>담당자</th>
+  <th>시험 조건·입력 자료</th>
+  <th>예상 결과</th>
+  <th>실제 결과</th>
+  <th>판정 및 수정 내용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>김동준</td>
+  <td>줄바꿈 형식·혼합 변경</td>
+  <td>같은 문단 결과</td>
+  <td>같은 문단 결과</td>
+  <td>통과. 아래 통합 실행 셀에서 재확인</td>
+</tr>
+<tr>
+  <td>김혜중</td>
+  <td>최대 길이 초과·짧은 꼬리</td>
+  <td>길이 제한·원문 보존</td>
+  <td>길이 제한·원문 보존</td>
+  <td>통과. 아래 통합 실행 셀에서 재확인</td>
+</tr>
+<tr>
+  <td>노재원</td>
+  <td>짧은 의견·제외 대상 혼합</td>
+  <td>보존·제외 기준 충족</td>
+  <td>보존·제외 기준 충족</td>
+  <td>통과. 아래 통합 실행 셀에서 재확인</td>
+</tr>
+<tr>
+  <td>송준서</td>
+  <td>자료 수 초과·빈 페이지</td>
+  <td>40개 제한·쪽 번호 보존·호출 절감</td>
+  <td>40개 제한·쪽 번호 보존·호출 절감</td>
+  <td>통과. 아래 통합 실행 셀에서 재확인</td>
+</tr>
+<tr>
+  <td>정종원</td>
+  <td>새 기호·기존 기호 혼합</td>
+  <td>문장 구분과 기존 동작 보존</td>
+  <td>문장 구분과 기존 동작 보존</td>
+  <td>통과. 아래 통합 실행 셀에서 재확인</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>결합 시험 및 통합 범위</strong></p>
+<ul>
+<li>결합 입력: 빈 첫 쪽과 CR로 나눈 긴 문단 두 개</li>
+<li>호출 함수: <code>split_pages</code></li>
+<li>확인 항목: 조각 길이 제한, 원문 보존, 원래 쪽 번호</li>
+<li>시험 범위: 내부 함수의 자료 처리 연결</li>
+<li>미포함 범위: 실제 PDF 추출 및 브라우저 클릭</li>
+<li>담당별 연결: <code>CHANGES</code>의 담당 번호에 해당하는 변경 구간·시험 입력 통합</li>
+<li>충돌 확인: 같은 함수의 두 수정 구간이 모두 유지되는지 결합 시험으로 확인</li>
+<li>확인 결과: 자동 시험 통과, 추가 수정 없음</li>
+</ul>
+</section><section class="preview-cell preview-code" aria-label="27번 코드 셀"><div class="preview-label">27 · 코드</div><pre><code class="language-python">final_text = dict(BASE_TEXT)
+for owner in range(1, 6):
+    final_text = changed(final_text, CHANGES[owner])
+for path, text in final_text.items():
+    (REPO / path).write_text(text, encoding=&quot;utf-8&quot;)
+    print(&quot;반영 파일:&quot;, REPO / path)
+saved = {path: (REPO / path).read_text(encoding=&quot;utf-8&quot;) for path in FILES}
+integrated_scope = load_functions(saved)
+RESULTS.clear()
+for owner, source in enumerate([TEST_1, TEST_2, TEST_3, TEST_4, TEST_5], 1):
+    print(&quot;\n통합본 담당&quot;, owner)
+    exec(source, dict(integrated_scope, check=check))
+print(&quot;\n담당별 기본 시험 합계:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+assert all(RESULTS)
+paragraphs, numbers = integrated_scope[&quot;split_pages&quot;]([&quot;&quot;, &quot;가&quot; * 721 + &quot;\r&quot; + &quot;나&quot; * 1000])
+check(&quot;결합 시험 길이 제한&quot;, True, all(len(p) &lt;= 420 for p in paragraphs))
+check(&quot;결합 시험 원문 보존&quot;, &quot;가&quot; * 721 + &quot;나&quot; * 1000, &quot;&quot;.join(paragraphs))
+check(&quot;결합 시험 쪽 번호&quot;, [2] * len(paragraphs), numbers)
+assert all(RESULTS)
+print(&quot;최종 전체 통과:&quot;, sum(RESULTS), &quot;/&quot;, len(RESULTS))
+print(&quot;최종 프로젝트 코드 위치:&quot;, REPO)
+</code></pre></section><section class="preview-cell" aria-label="28번 텍스트 셀"><div class="preview-label">28 · 텍스트</div><h2>개선 결과</h2>
+<ul>
+<li>개선 대상: 줄바꿈 입력, 긴 글 분할, 짧은 의견 보존, 반복 처리, 문장 기호 지원</li>
+<li>통합본 시험: 담당별 기본 시험 20개 + 결합 시험 3개</li>
+<li>교차 검증: 추가 조건 6개</li>
+<li>판정 근거: 실행 셀의 예상·실제·판정 출력</li>
+</ul>
+<h2>최종 코드와 실행 방법</h2>
+<ul>
+<li>기준 저장소: <a href="https://github.com/jkzk1397/minime">MINIME</a>, 커밋 <code>cf389690fd36f457d7ddeab4ae2b323029d348aa</code>.</li>
+<li>변경 함수: <code>app/persona.py</code>의 split_report·split_pages, <code>app/sources.py</code>의 clean_lines, <code>app/ko.py</code>의 sentences.</li>
+<li>수정 전 코드는 BASE_TEXT에, 개인 수정본은 PERSONAL_1~5에, 최종 코드는 REPO의 실제 파일에 있다. GitHub 원격 저장소에 자동 게시하지 않는다.</li>
+<li>Colab에서 번호 순서대로 코드 셀을 실행한다. 입력 예시를 직접 바꿔 다시 실행할 수 있다. 변경 시 후속 개인 시험·교차 검증·최종 통합도 다시 실행한다.</li>
+<li>전체 웹앱은 이 저장소를 내려받아 Windows run.bat 또는 macOS·Linux run.sh로 실행한다. 이번 개선의 동작 근거는 Colab의 실제 함수 출력이다.</li>
+<li>외부 AI API 키·유료 서비스·시험 파일 업로드가 필요하지 않다. 최초 저장소 다운로드에 인터넷 연결이 필요하다.</li>
+<li>실행 출력이 남은 Colab을 저장하고 평가자에게 열람 권한을 부여한다. <strong>최종 제출물은 Colab 공유 링크 1개다.</strong></li>
+</ul>
+<h2>제출 전 확인 항목</h2>
+<ul>
+<li>프로젝트 소개·선택한 방식·문제·기대 결과: STEP 1.</li>
+<li>역할 분담표·개인별 완료 기준, 자료·출처·처리 기준·원본 보관: 역할표와 STEP 2.</li>
+<li>구현·수정 코드·AI 요청과 반영 내용·전후 출력·개인별 참여 기록: STEP 3의 이름별 구역.</li>
+<li>교차 검증과 담당별 서로 다른 통합 시험: STEP 4~5의 기록표와 실행 출력.</li>
+<li>최종 코드 위치와 실행 방법: 위 안내와 REPO 경로 출력.</li>
+<li>Colab 코드는 실행 결과가 표시된 상태로 저장한다. 노트북과 연결된 저장소의 열람 권한을 확인한다. 별도 보고서 대신 공유 링크 하나를 제출한다.</li>
+</ul>
+</section></article></div></main><script>
+const buttons = document.querySelectorAll('[data-copy]');
+const status = document.getElementById('status');
+function fallbackCopy(text, source) {
+  const field = document.createElement('textarea');
+  field.value = text;
+  field.style.cssText = 'position:fixed;left:-9999px;top:0';
+  document.body.appendChild(field);
+  try {
+    field.select();
+    return document.execCommand('copy');
+  } finally {
+    field.remove();
+    source.focus({preventScroll: true});
+  }
+}
+async function copyCell(button) {
+  const id = button.dataset.copy;
+  const body = document.getElementById('body-' + id);
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(body.textContent);
+    copied = true;
+  } catch {
+    try { copied = fallbackCopy(body.textContent, button); } catch {}
+  }
+  if (copied) {
+    document.querySelector('#cell-' + id).classList.add('copied');
+    button.textContent = '복사됨 · 다시 복사';
+    status.textContent = id + '번 셀 본문을 복사했습니다.';
+  } else {
+    const range = document.createRange();
+    range.selectNodeContents(body);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    status.textContent = id + '번 본문을 선택했습니다. Ctrl+C를 누르세요.';
+  }
+}
+buttons.forEach(button => button.addEventListener('click', () => copyCell(button)));
+
+const viewTabs = [...document.querySelectorAll('.view-tabs [role="tab"]')];
+function selectView(tab) {
+  viewTabs.forEach(item => {
+    const selected = item === tab;
+    item.setAttribute('aria-selected', String(selected));
+    item.tabIndex = selected ? 0 : -1;
+    document.getElementById(item.getAttribute('aria-controls')).hidden = !selected;
+  });
+}
+viewTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => selectView(tab));
+  tab.addEventListener('keydown', event => {
+    let next;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') next = viewTabs[1 - index];
+    if (event.key === 'Home') next = viewTabs[0];
+    if (event.key === 'End') next = viewTabs[viewTabs.length - 1];
+    if (next) { event.preventDefault(); selectView(next); next.focus(); }
+  });
+});
+window.addEventListener('hashchange', () => {
+  if (/^#cell-/.test(location.hash)) selectView(viewTabs[0]);
+});
+</script></body></html>

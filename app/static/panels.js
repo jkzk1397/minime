@@ -459,14 +459,17 @@ window.MMPanels = function (ctx) {
     const P = S.prep;
     const title = h('input', { value: x.title || '', maxlength: 60 });
     const ta = h('textarea', { rows: 12, value: x.text || '' });
-    let edited = false;
-    const keepNote = h('div', { class: 'muted sm', text: x.pages ? '출처에 쪽 번호가 붙어요 (예: p.3)' : '' });
-    ta.addEventListener('input', () => { if (!edited && x.pages) keepNote.textContent = '글을 고쳐서 쪽 번호는 빠져요'; edited = true; });
+    const pageFields = x.pages?.map((page, i) => {
+      const input = h('textarea', { rows: 4, value: page, 'aria-label': `${i + 1}쪽 내용` });
+      return { input, field: h('label', { class: 'field' }, `${i + 1}쪽`, input) };
+    });
     const go = h('button', { class: 'btn primary', type: 'button' }, icon('spark'), '올리고 입장 찾기');
     go.addEventListener('click', () => {
-      if (!ta.value.trim()) { toast('올릴 내용이 비어 있어요.'); return; }
+      const pages = pageFields?.map(({ input }) => input.value) ?? null;
+      const text = pages ? pages.join('\n\n') : ta.value;
+      if (!text.trim()) { toast('올릴 내용이 비어 있어요.'); return; }
       run(go, '분석 중…', async () => {
-        const res = await prepApi('POST', '/reports', { title: title.value, text: ta.value, source: x.source, pages: edited ? null : x.pages });
+        const res = await prepApi('POST', '/reports', { title: title.value, text, source: x.source, pages });
         P.extract = null;
         afterReport(res);
       });
@@ -478,7 +481,8 @@ window.MMPanels = function (ctx) {
       (x.warnings || []).length ? h('ul', { class: 'warn-list' }, x.warnings.map(w => h('li', {}, icon('alert', 'xs'), h('span', { text: w })))) : null,
       h('p', { class: 'muted sm', style: 'margin:0', text: '숫자와 내 입장이 맞게 들어갔는지 보고, 틀린 곳은 고쳐 주세요.' }),
       h('label', { class: 'field' }, h('span', { text: '제목' }), title),
-      h('label', { class: 'field' }, h('span', { text: '내용' }, h('small', { text: '빈 줄 = 문단' })), ta, keepNote),
+      pageFields ? pageFields.map(({ field }) => field) :
+        h('label', { class: 'field' }, h('span', { text: '내용' }), h('small', { text: '빈 줄 = 문단' }), ta),
       h('div', { class: 'hrow', style: 'justify-content:flex-end' },
         h('button', { class: 'btn ghost', type: 'button', on: { click: () => { P.extract = null; renderPrep(); } } }, '취소'), go),
     ];
@@ -645,10 +649,13 @@ window.MMPanels = function (ctx) {
       const draw = () => fill(chips, [...opts, ...(opts.length ? ['상관없음'] : []), '아직 모름'].map(lbl => h('button', {
         type: 'button', role: 'radio', class: `choice${lbl === '아직 모름' ? ' unknown' : ''}`,
         'aria-checked': String((st.choice || '아직 모름') === lbl),
-        on: { click: () => { st.choice = lbl === '아직 모름' ? '' : lbl; draw(); } },
+        on: { click: () => { st.clear = lbl === '아직 모름'; st.choice = st.clear ? '' : lbl;
+          if (st.clear) { reason.value = ''; red.value = ''; }
+          draw(); } },
       }, lbl)));
       draw();
-      st.read = () => ({ issue_id: issue.id, choice: st.choice, reason: reason.value.trim(), red_line: red.value.trim() });
+      st.read = () => ({ issue_id: issue.id, choice: st.choice, reason: reason.value.trim(), red_line: red.value.trim(),
+        clear: Boolean(st.clear && !reason.value.trim()) });
       states.push(st);
       return h('div', { class: 'quick-row' },
         h('div', { class: 'quick-title' }, h('b', { text: issue.title }), old ? tag('저장됨', 'ok') : null),
@@ -657,13 +664,15 @@ window.MMPanels = function (ctx) {
     });
     const save = h('button', { class: 'btn primary', type: 'button' }, icon('check', 'xs'), '이대로 저장');
     save.addEventListener('click', () => {
-      const items = states.map(x => x.read()).filter(x => x.choice || x.reason);
+      const items = states.map(x => x.read()).filter(x => x.choice || x.reason || x.clear);
       if (!items.length) { toast('쟁점 하나 이상에서 선택지를 고르거나 한 줄을 적어 주세요.'); return; }
       run(save, '저장 중…', async () => {
         const res = await prepApi('POST', '/quick', { items });
         if (!applyPrep(res.member)) return;
         const r = res.member.readiness || {};
-        toast(`입장 ${res.created}개를 저장했어요. 쟁점 ${r.total || 0}개 중 ${r.covered || 0}개에 답할 수 있어요.`);
+        toast(res.created
+          ? `입장 ${res.created}개를 저장했어요. 쟁점 ${r.total || 0}개 중 ${r.covered || 0}개에 답할 수 있어요.`
+          : '기존 빠른 입장을 철회했어요.');
         S.prep.tab = 4; renderPrep();
       });
     });
@@ -791,13 +800,14 @@ window.MMPanels = function (ctx) {
     });
     const remove = st => async () => { try { if (applyPrep(await prepApi('DELETE', `/stances/${st.id}`))) renderPrep(); } catch (e) { toast(e.message, 'bad'); } };
     const title = id => { const i = issues.find(x => x.id === id); return i ? `${i.title} 나올 때` : '회의 시작 때'; };
+    const statusLabels = { waiting_for_meeting: '회의 시작 대기', pending: '전달 대기', delivered: '전달 완료' };
     return [
       h('p', { class: 'muted sm', style: 'margin:0', text: '미니미가 고치지 않고 그대로, 회의마다 한 번 전해요.' }),
       h('div', { class: 'field' }, h('div', { class: 'hrow', style: 'justify-content:space-between' }, h('span', { text: '전할 말' }), micBtn(ta)), ta),
       h('div', { class: 'hrow', style: 'align-items:flex-end' }, h('label', { class: 'field grow', style: 'min-width:200px' }, h('span', { text: '언제' }), sel), add),
       memos.length ? h('div', { class: 'section-title', text: `남긴 메모 ${memos.length}개` }) : null,
       memos.map(st => h('div', { class: 'memo-item' }, icon('note', 'xs'),
-        h('div', { class: 'grow' }, h('div', { text: st.claim }), h('div', { class: 'muted sm', text: `${st.label || '메모'} · ${title(st.issue_id)}` })),
+        h('div', { class: 'grow' }, h('div', { text: st.claim }), h('div', { class: 'muted sm', text: `${st.label || '메모'} · ${title(st.issue_id)}${statusLabels[st.delivery_status] ? ' · ' + statusLabels[st.delivery_status] : ''}` })),
         h('button', { class: 'icon-btn sm', type: 'button', 'aria-label': '메모 삭제', title: '삭제', on: { click: remove(st) } }, icon('trash')))),
     ];
   }

@@ -11,7 +11,7 @@ _SENT = re.compile(r"(?<=[.!?。])\s+|(?<=[다요죠음함])\.\s*|\n+")
 
 
 def sentences(text: str) -> list[str]:
-    parts = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
+    parts = re.split(r"(?<=[.!?。！？])\s+|\n+", text.strip())
     out = []
     for p in parts:
         p = p.strip()

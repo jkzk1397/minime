@@ -173,7 +173,7 @@ _EXTRACT_SCHEMA = {
 
 def split_report(text: str) -> list[str]:
     """붙여 넣은 글을 문단으로. 빈 줄 기준, 너무 긴 문단은 문장 단위로 다시 나눈다."""
-    text = text.replace("\r\n", "\n").strip()
+    text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     paras = [re.sub(r"\s*\n\s*", " ", x).strip() for x in re.split(r"\n\s*\n", text) if x.strip()]
     if len(paras) == 1 and "\n" in text:
         paras = [x.strip() for x in text.split("\n") if x.strip()]
@@ -184,14 +184,13 @@ def split_report(text: str) -> list[str]:
         if len(para) <= 420:
             out.append(para)
             continue
-        buf = ""
-        for s in ko.sentences(para):
-            if len(buf) + len(s) > 360 and buf:
-                out.append(buf.strip())
-                buf = ""
-            buf += " " + s
-        if buf.strip():
-            out.append(buf.strip())
+        # 문장 부호가 없어도 길이를 제한하고 모든 글자를 보존한다.
+        pieces = [para[i:i + 360] for i in range(0, len(para), 360)]
+        # 8자 미만 꼬리가 마지막 필터에서 사라지지 않게 앞 조각에 붙인다.
+        if len(pieces) > 1 and len(pieces[-1]) < 8:
+            tail = pieces.pop()
+            pieces[-1] += tail
+        out.extend(pieces)
     return [p for p in out if len(p) >= 8][:40]
 
 
@@ -262,6 +261,8 @@ def split_pages(pages: list[str]) -> tuple[list[str], list[int]]:
     paras: list[str] = []
     nums: list[int] = []
     for n, text in enumerate(pages, 1):
+        if len(paras) >= 40:
+            break
         for para in split_report(text or ""):
             if len(paras) >= 40:
                 break
